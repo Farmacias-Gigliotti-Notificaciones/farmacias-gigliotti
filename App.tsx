@@ -1,0 +1,233 @@
+
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Sidebar } from './components/Sidebar';
+import { Dashboard } from './components/Dashboard';
+import { TaskList } from './components/TaskList';
+import { Login } from './components/Login';
+import { UserManagement } from './components/UserManagement';
+import { BranchManagement } from './components/BranchManagement';
+import { UserAnalytics } from './components/UserAnalytics';
+import { Settings } from './components/Settings';
+import { GlobalChat } from './components/GlobalChat';
+import { MOCK_PROJECTS, MOCK_TASKS, MOCK_USERS, MOCK_BRANCHES } from './constants';
+import { Task, User, UserRole, Branch, Project, TaskStatus } from './types';
+import { syncService } from './services/syncService';
+import { Cloud, RefreshCw } from 'lucide-react';
+
+const STORAGE_KEYS = {
+  USERS: 'farmacia_users_v2',
+  TASKS: 'farmacia_tasks_v2',
+  BRANCHES: 'farmacia_branches_v2',
+  PROJECTS: 'farmacia_projects_v2',
+  SESSION: 'farmacia_session_v2',
+  TAB: 'farmacia_active_tab_v2',
+  LAST_SEEN_MAP: 'farmacia_last_seen_per_user_v2',
+  HIDDEN_CHATS: 'farmacia_hidden_chats_v2'
+};
+
+function App() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('projects');
+  
+  const [users, setUsers] = useState<User[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  
+  const [lastSeenMap, setLastSeenMap] = useState<Record<string, Record<string, number>>>({});
+  const [hiddenChats, setHiddenChats] = useState<string[]>([]);
+
+  // Inicialización modo "Cloud"
+  useEffect(() => {
+    const initApp = async () => {
+      setIsLoading(true);
+      const data = await syncService.loadAllData();
+      
+      setUsers(data.users.length ? data.users : MOCK_USERS);
+      setTasks(data.tasks.length ? data.tasks : MOCK_TASKS);
+      setBranches(data.branches.length ? data.branches : MOCK_BRANCHES);
+      setProjects(data.projects.length ? data.projects : MOCK_PROJECTS);
+      
+      const session = localStorage.getItem(STORAGE_KEYS.SESSION);
+      if (session) setCurrentUser(JSON.parse(session));
+      
+      const tab = localStorage.getItem(STORAGE_KEYS.TAB);
+      if (tab) setActiveTab(JSON.parse(tab));
+
+      setLastSeenMap(JSON.parse(localStorage.getItem(STORAGE_KEYS.LAST_SEEN_MAP) || '{}'));
+      setHiddenChats(JSON.parse(localStorage.getItem(STORAGE_KEYS.HIDDEN_CHATS) || '[]'));
+      
+      setIsLoading(false);
+    };
+    initApp();
+  }, []);
+
+  // Sincronización automática con la "Nube"
+  const performSync = useCallback(async (key: string, data: any) => {
+    setIsSyncing(true);
+    await syncService.saveData(key, data);
+    setTimeout(() => setIsSyncing(false), 500); // Feedback visual
+  }, []);
+
+  useEffect(() => { if (!isLoading) performSync(STORAGE_KEYS.USERS, users); }, [users, isLoading]);
+  useEffect(() => { if (!isLoading) performSync(STORAGE_KEYS.TASKS, tasks); }, [tasks, isLoading]);
+  useEffect(() => { if (!isLoading) performSync(STORAGE_KEYS.BRANCHES, branches); }, [branches, isLoading]);
+  useEffect(() => { if (!isLoading) performSync(STORAGE_KEYS.PROJECTS, projects); }, [projects, isLoading]);
+  useEffect(() => { if (!isLoading) performSync(STORAGE_KEYS.LAST_SEEN_MAP, lastSeenMap); }, [lastSeenMap, isLoading]);
+  useEffect(() => { if (!isLoading) performSync(STORAGE_KEYS.HIDDEN_CHATS, hiddenChats); }, [hiddenChats, isLoading]);
+  useEffect(() => { 
+    if (currentUser) localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(currentUser));
+    else localStorage.removeItem(STORAGE_KEYS.SESSION);
+  }, [currentUser]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.TAB, JSON.stringify(activeTab)); }, [activeTab]);
+
+  const currentUserSeenRegistry = useMemo(() => {
+    return currentUser ? (lastSeenMap[currentUser.id] || {}) : {};
+  }, [lastSeenMap, currentUser]);
+
+  const newMessagesCount = useMemo(() => {
+    if (!currentUser) return 0;
+    return tasks.reduce((total, task) => {
+      if (hiddenChats.includes(task.id) || task.comments.length === 0) return total;
+      
+      let canAccess = false;
+      if (currentUser.role === UserRole.USUARIO) {
+          canAccess = task.assigneeId === currentUser.id || task.creatorId === currentUser.id;
+      } else {
+          const isRoleAllowed = task.allowedChatRoles && task.allowedChatRoles.includes(currentUser.role);
+          if (isRoleAllowed) {
+              if ([UserRole.SOCIO, UserRole.GERENCIA, UserRole.RRHH, UserRole.SUPERVISOR].includes(currentUser.role)) {
+                  canAccess = true;
+              } else {
+                  const assignee = users.find(u => u.id === task.assigneeId);
+                  const creator = users.find(u => u.id === task.creatorId);
+                  canAccess = assignee?.branch === currentUser.branch || creator?.branch === currentUser.branch;
+              }
+          }
+      }
+      if (!canAccess) return total;
+      const lastSeen = currentUserSeenRegistry[task.id] || 0;
+      const unreadMsgs = task.comments.filter(c => {
+        return new Date(c.timestamp).getTime() > lastSeen && c.userId !== currentUser.id;
+      }).length;
+      return total + unreadMsgs;
+    }, 0);
+  }, [tasks, currentUserSeenRegistry, currentUser, hiddenChats, users]);
+
+  const handleUpdateTask = useCallback((updatedTask: Task) => {
+    setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+    const lastMsg = updatedTask.comments[updatedTask.comments.length - 1];
+    if (lastMsg && lastMsg.userId === currentUser?.id) {
+        handleMarkChannelAsRead(updatedTask.id);
+    }
+  }, [currentUser?.id]);
+
+  const handleAddTask = (newTask: Task) => { setTasks(prev => [...prev, newTask]); };
+
+  const handleMarkChannelAsRead = useCallback((taskId: string) => {
+    if (!currentUser) return;
+    const task = tasks.find(t => t.id === taskId);
+    const latestMsgTime = task && task.comments.length > 0 
+      ? Math.max(...task.comments.map(c => new Date(c.timestamp).getTime()))
+      : Date.now();
+
+    setLastSeenMap(prev => {
+        const userRegistry = prev[currentUser.id] || {};
+        return {
+            ...prev,
+            [currentUser.id]: {
+                ...userRegistry,
+                [taskId]: latestMsgTime + 1 
+            }
+        };
+    });
+  }, [tasks, currentUser]);
+
+  const handleClearChat = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      handleUpdateTask({ ...task, comments: [] });
+      handleMarkChannelAsRead(taskId);
+    }
+  };
+
+  const handleHideChat = (taskId: string) => {
+    setHiddenChats(prev => [...new Set([...prev, taskId])]);
+  };
+
+  const handleLogin = (user: User) => {
+    const updatedUser = { ...user, lastLogin: new Date().toISOString() };
+    setUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
+    setCurrentUser(updatedUser);
+    setActiveTab(['ENCARGADO', 'GERENCIA', 'SOCIO', 'SUPERVISOR', 'RRHH'].includes(user.role) ? 'dashboard' : 'projects');
+  };
+
+  const handleLogout = () => { setCurrentUser(null); setActiveTab('projects'); };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
+        <div className="relative w-24 h-24 mb-8">
+            <RefreshCw size={96} className="text-brand-500 animate-spin opacity-20" />
+            <Cloud size={48} className="absolute inset-0 m-auto text-brand-500 animate-pulse" />
+        </div>
+        <h2 className="text-2xl font-black tracking-tighter mb-2">Conectando con Servidor Central</h2>
+        <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.3em]">Farmacias Gigliotti | Cloud Sync</p>
+      </div>
+    );
+  }
+
+  if (!currentUser) return <Login users={users} branches={branches} onLogin={handleLogin} />;
+
+  const renderContent = () => {
+    const visibleUsers = (currentUser.role === UserRole.GERENCIA || currentUser.role === UserRole.SOCIO) ? users : users.filter(u => u.role !== UserRole.SOCIO);
+    switch (activeTab) {
+      case 'dashboard': return <Dashboard projects={projects} tasks={tasks} role={currentUser.role} users={visibleUsers} currentUser={currentUser} />;
+      case 'projects': return <TaskList tasks={tasks} users={visibleUsers} currentUser={currentUser} onUpdateTask={handleUpdateTask} onAddTask={handleAddTask} />;
+      case 'chat': return (
+        <GlobalChat 
+          tasks={tasks} 
+          currentUser={currentUser} 
+          onUpdateTask={handleUpdateTask} 
+          lastSeenByChannel={currentUserSeenRegistry}
+          hiddenChats={hiddenChats}
+          onMarkAsRead={handleMarkChannelAsRead}
+          onClearChat={handleClearChat}
+          onHideChat={handleHideChat}
+          allUsers={users}
+        />
+      );
+      case 'users': return <UserManagement users={visibleUsers} branches={branches} tasks={tasks} currentUser={currentUser} onAddUser={u => setUsers([...users, u])} onUpdateUser={u => setUsers(users.map(x => x.id === u.id ? u : x))} onDeleteUser={id => setUsers(users.filter(x => x.id !== id))} />;
+      case 'branches': return <BranchManagement branches={branches} onAddBranch={b => setBranches([...branches, b])} onUpdateBranch={b => setBranches(branches.map(x => x.id === b.id ? b : x))} onDeleteBranch={id => setBranches(branches.filter(x => x.id !== id))} />;
+      case 'activity': return <UserAnalytics users={visibleUsers} />;
+      case 'settings': return <Settings currentUser={currentUser} onUpdateUser={u => setUsers(users.map(x => x.id === u.id ? u : x))} />;
+      default: return <div className="p-8 text-center text-slate-400">Sección en construcción</div>;
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen bg-slate-50 font-sans">
+      <Sidebar 
+        currentUser={currentUser} 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        onLogout={handleLogout} 
+        newMessagesCount={newMessagesCount} 
+        isSyncing={isSyncing}
+      />
+      <main className="flex-1 ml-64 bg-slate-50 min-h-screen relative">
+        {isSyncing && (
+          <div className="fixed top-4 right-4 z-[100] flex items-center space-x-2 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg border border-brand-100 animate-fade-in">
+             <RefreshCw size={14} className="text-brand-500 animate-spin" />
+             <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Nube Sincronizada</span>
+          </div>
+        )}
+        {renderContent()}
+      </main>
+    </div>
+  );
+}
+
+export default App;

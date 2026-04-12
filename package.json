@@ -1,0 +1,27 @@
+{
+  "name": "farmacia-gigliotti-gestion",
+  "private": true,
+  "version": "2.5.5",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host --port 3000 --force",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "lucide-react": "^0.460.0",
+    "recharts": "^2.13.3",
+    "@google/genai": "latest"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "gh-pages": "^6.1.1",
+    "typescript": "^5.6.2"
+  }
+}
