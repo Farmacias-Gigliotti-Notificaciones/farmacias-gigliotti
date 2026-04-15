@@ -78,6 +78,33 @@ export const syncService = {
     };
   },
 
+  async createItem(table: string, data: any): Promise<boolean> {
+    const config = this.getCloudConfig();
+    const cleanUrl = config.apiUrl?.replace(/\/$/, '');
+    if (!config.active || !cleanUrl || !config.apiKey) return true;
+
+    try {
+      const res = await fetch(`${cleanUrl}/rest/v1/${table}`, {
+        method: 'POST',
+        headers: {
+          'apikey': config.apiKey,
+          'Authorization': `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error(`Error Supabase POST [${table}]:`, err);
+      }
+      return res.ok;
+    } catch (e) {
+      console.error(`Error creando en ${table}:`, e);
+      return false;
+    }
+  },
+
   async updateItem(table: string, id: string, data: any): Promise<boolean> {
     const config = this.getCloudConfig();
     const cleanUrl = config.apiUrl?.replace(/\/$/, '');

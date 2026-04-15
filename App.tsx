@@ -135,15 +135,20 @@ function App() {
     });
   }, [tasks, currentUser]);
 
-  const handleUpdateTask = useCallback((updatedTask: Task) => {
+  const handleUpdateTask = useCallback(async (updatedTask: Task) => {
     setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+    await syncService.updateItem('tasks', updatedTask.id, updatedTask);
+    
     const lastMsg = updatedTask.comments[updatedTask.comments.length - 1];
     if (lastMsg && lastMsg.userId === currentUser?.id) {
         handleMarkChannelAsRead(updatedTask.id);
     }
   }, [currentUser?.id, handleMarkChannelAsRead]);
 
-  const handleAddTask = (newTask: Task) => { setTasks(prev => [...prev, newTask]); };
+  const handleAddTask = async (newTask: Task) => { 
+    setTasks(prev => [...prev, newTask]); 
+    await syncService.createItem('tasks', newTask);
+  };
 
   const handleDeleteTask = useCallback(async (taskId: string) => {
     const canDelete = [UserRole.SOCIO, UserRole.GERENCIA, UserRole.RRHH, UserRole.SUPERVISOR, UserRole.ENCARGADO].includes(currentUser!.role);
@@ -239,7 +244,27 @@ function App() {
           allUsers={users}
         />
       );
-      case 'users': return <UserManagement users={visibleUsers} branches={branches} tasks={tasks} currentUser={currentUser} onAddUser={u => setUsers([...users, u])} onUpdateUser={u => setUsers(users.map(x => x.id === u.id ? u : x))} onDeleteUser={id => setUsers(users.filter(x => x.id !== id))} />;
+      case 'users': return (
+        <UserManagement 
+          users={visibleUsers} 
+          branches={branches} 
+          tasks={tasks} 
+          currentUser={currentUser} 
+          onAddUser={async u => {
+            setUsers([...users, u]);
+            await syncService.createItem('users', u);
+          }} 
+          onUpdateUser={async u => {
+            setUsers(users.map(x => x.id === u.id ? u : x));
+            await syncService.updateItem('users', u.id, u);
+          }} 
+          onDeleteUser={async id => {
+            if (await syncService.deleteItem('users', id)) {
+              setUsers(users.filter(x => x.id !== id));
+            }
+          }} 
+        />
+      );
       case 'branches': return <BranchManagement branches={branches} onAddBranch={b => setBranches([...branches, b])} onUpdateBranch={handleUpdateBranch} onDeleteBranch={handleDeleteBranch} />;
       case 'activity': return <UserAnalytics users={visibleUsers} />;
       case 'settings': return <Settings currentUser={currentUser} onUpdateUser={u => setUsers(users.map(x => x.id === u.id ? u : x))} />;
