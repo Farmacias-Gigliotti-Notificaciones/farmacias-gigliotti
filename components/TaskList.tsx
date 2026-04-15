@@ -37,9 +37,10 @@ interface TaskListProps {
   currentUser: User;
   onUpdateTask: (task: Task) => void;
   onAddTask: (task: Task) => void;
+  onDeleteTask: (taskId: string) => void;
 }
 
-export const TaskList: React.FC<TaskListProps> = ({ tasks, users, currentUser, onUpdateTask, onAddTask }) => {
+export const TaskList: React.FC<TaskListProps> = ({ tasks, users, currentUser, onUpdateTask, onAddTask, onDeleteTask }) => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [formMode, setFormMode] = useState<'CREATE' | 'EDIT'>('CREATE');
@@ -67,7 +68,7 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, users, currentUser, o
   const attachInputRef = useRef<HTMLInputElement>(null);
 
   const isSuperior = [UserRole.ENCARGADO, UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
-  const canSeeAudit = [UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
+  const canSeeAudit = [UserRole.ENCARGADO, UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
 
   const filteredTasks = useMemo(() => {
     if (currentUser.role === UserRole.USUARIO) return tasks.filter(t => t.assigneeId === currentUser.id);
@@ -303,10 +304,19 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, users, currentUser, o
             </div>
             <div className="space-y-3 overflow-y-auto pr-1 custom-scrollbar-thin flex-1 pb-2">
               {filteredTasks.filter(t => t.status === col.status).map(task => (
-                <div key={task.id} onClick={() => { setSelectedTask(task); setShowAuditLogs(false); }} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md hover:border-brand-500 transition-all cursor-pointer group">
+                <div key={task.id} onClick={() => { setSelectedTask(task); setShowAuditLogs(false); }} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md hover:border-brand-500 transition-all cursor-pointer group relative">
                    <div className="flex justify-between items-start mb-2">
                       <span className={`text-[8px] font-black px-2 py-0.5 rounded-md border uppercase tracking-tighter ${task.priority === 'CRITICA' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>{task.priority}</span>
-                      <div className="flex items-center space-x-1">
+                      <div className="flex items-center space-x-2">
+                        {canSeeAudit && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); }}
+                            className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            title="Borrar Tarea"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
                         {task.executionLogs?.length > 0 && <ShieldCheck size={10} className="text-emerald-500" />}
                         {task.executableFile && <Rocket size={10} className="text-brand-500 animate-pulse" />}
                       </div>

@@ -116,16 +116,6 @@ function App() {
     }, 0);
   }, [tasks, currentUserSeenRegistry, currentUser, hiddenChats, users]);
 
-  const handleUpdateTask = useCallback((updatedTask: Task) => {
-    setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
-    const lastMsg = updatedTask.comments[updatedTask.comments.length - 1];
-    if (lastMsg && lastMsg.userId === currentUser?.id) {
-        handleMarkChannelAsRead(updatedTask.id);
-    }
-  }, [currentUser?.id]);
-
-  const handleAddTask = (newTask: Task) => { setTasks(prev => [...prev, newTask]); };
-
   const handleMarkChannelAsRead = useCallback((taskId: string) => {
     if (!currentUser) return;
     const task = tasks.find(t => t.id === taskId);
@@ -145,6 +135,32 @@ function App() {
     });
   }, [tasks, currentUser]);
 
+  const handleUpdateTask = useCallback((updatedTask: Task) => {
+    setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+    const lastMsg = updatedTask.comments[updatedTask.comments.length - 1];
+    if (lastMsg && lastMsg.userId === currentUser?.id) {
+        handleMarkChannelAsRead(updatedTask.id);
+    }
+  }, [currentUser?.id, handleMarkChannelAsRead]);
+
+  const handleAddTask = (newTask: Task) => { setTasks(prev => [...prev, newTask]); };
+
+  const handleDeleteTask = useCallback(async (taskId: string) => {
+    const canDelete = [UserRole.SOCIO, UserRole.GERENCIA, UserRole.RRHH, UserRole.SUPERVISOR, UserRole.ENCARGADO].includes(currentUser!.role);
+    
+    if (!canDelete) {
+      alert("No tienes permisos de auditoría para eliminar tareas.");
+      return;
+    }
+
+    if (window.confirm('¿Confirmas la eliminación definitiva de esta tarea en el servidor?')) {
+      const success = await syncService.deleteItem('tasks', taskId);
+      if (success) {
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+      }
+    }
+  }, [currentUser]);
+
   const handleClearChat = (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (task) {
@@ -152,6 +168,30 @@ function App() {
       handleMarkChannelAsRead(taskId);
     }
   };
+
+  const handleUpdateBranch = useCallback(async (updatedBranch: Branch) => {
+    const oldBranch = branches.find(b => b.id === updatedBranch.id);
+    
+    // Actualización segura por ID único en Supabase
+    const success = await syncService.updateItem('branches', updatedBranch.id, updatedBranch);
+    if (success) {
+      setBranches(prev => prev.map(b => b.id === updatedBranch.id ? updatedBranch : b));
+      
+      // Propagación de integridad: Si el nombre cambió, actualizamos los usuarios vinculados
+      if (oldBranch && oldBranch.name !== updatedBranch.name) {
+        setUsers(prev => prev.map(u => u.branch === oldBranch.name ? { ...u, branch: updatedBranch.name } : u));
+      }
+    }
+  }, [branches]);
+
+  const handleDeleteBranch = useCallback(async (branchId: string) => {
+    if (window.confirm('¿Eliminar esta sucursal del servidor?')) {
+      const success = await syncService.deleteItem('branches', branchId);
+      if (success) {
+        setBranches(prev => prev.filter(b => b.id !== branchId));
+      }
+    }
+  }, []);
 
   const handleHideChat = (taskId: string) => {
     setHiddenChats(prev => [...new Set([...prev, taskId])]);
@@ -185,7 +225,7 @@ function App() {
     const visibleUsers = (currentUser.role === UserRole.GERENCIA || currentUser.role === UserRole.SOCIO) ? users : users.filter(u => u.role !== UserRole.SOCIO);
     switch (activeTab) {
       case 'dashboard': return <Dashboard projects={projects} tasks={tasks} role={currentUser.role} users={visibleUsers} currentUser={currentUser} />;
-      case 'projects': return <TaskList tasks={tasks} users={visibleUsers} currentUser={currentUser} onUpdateTask={handleUpdateTask} onAddTask={handleAddTask} />;
+      case 'projects': return <TaskList tasks={tasks} users={visibleUsers} currentUser={currentUser} onUpdateTask={handleUpdateTask} onAddTask={handleAddTask} onDeleteTask={handleDeleteTask} />;
       case 'chat': return (
         <GlobalChat 
           tasks={tasks} 
@@ -200,7 +240,7 @@ function App() {
         />
       );
       case 'users': return <UserManagement users={visibleUsers} branches={branches} tasks={tasks} currentUser={currentUser} onAddUser={u => setUsers([...users, u])} onUpdateUser={u => setUsers(users.map(x => x.id === u.id ? u : x))} onDeleteUser={id => setUsers(users.filter(x => x.id !== id))} />;
-      case 'branches': return <BranchManagement branches={branches} onAddBranch={b => setBranches([...branches, b])} onUpdateBranch={b => setBranches(branches.map(x => x.id === b.id ? b : x))} onDeleteBranch={id => setBranches(branches.filter(x => x.id !== id))} />;
+      case 'branches': return <BranchManagement branches={branches} onAddBranch={b => setBranches([...branches, b])} onUpdateBranch={handleUpdateBranch} onDeleteBranch={handleDeleteBranch} />;
       case 'activity': return <UserAnalytics users={visibleUsers} />;
       case 'settings': return <Settings currentUser={currentUser} onUpdateUser={u => setUsers(users.map(x => x.id === u.id ? u : x))} />;
       default: return <div className="p-8 text-center text-slate-400">Sección en construcción</div>;

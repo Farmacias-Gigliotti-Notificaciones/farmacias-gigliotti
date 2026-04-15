@@ -46,18 +46,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeTab, setAct
     <div className="w-64 bg-slate-900 text-white h-screen flex flex-col fixed left-0 top-0 shadow-2xl z-50">
       
       <div className="p-6 border-b border-slate-800/50 flex items-center space-x-3 bg-slate-900">
-        <div className="w-10 h-10 bg-gradient-to-br from-white to-slate-100 rounded-xl flex items-center justify-center p-1 shrink-0">
-            <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                <linearGradient id="logoGradSmall" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#10b981" /> 
-                    <stop offset="100%" stopColor="#0ea5e9" /> 
-                </linearGradient>
-                </defs>
-                <path d="M 30 20 Q 0 50 30 80" stroke="url(#logoGradSmall)" strokeWidth="10" strokeLinecap="round" fill="none" />
-                <path d="M 70 20 Q 100 50 70 80" stroke="url(#logoGradSmall)" strokeWidth="10" strokeLinecap="round" fill="none" />
-                <path d="M 42 25 L 58 25 L 58 42 L 75 42 L 75 58 L 58 58 L 58 75 L 42 75 L 42 58 L 25 58 L 25 42 L 42 42 Z" fill="url(#logoGradSmall)" />
-            </svg>
+        <div className="w-12 h-12 flex items-center justify-center shrink-0">
+            <img src="logo_gigliotti.png" alt="Farmacia Gigliotti" className="w-full h-full object-contain" />
         </div>
         <div className="overflow-hidden">
             <span className="block text-lg font-bold tracking-tight leading-none text-white">Farmacias</span>

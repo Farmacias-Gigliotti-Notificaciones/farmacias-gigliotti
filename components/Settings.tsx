@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { User } from '../types';
+import { User, CloudConfig } from '../types';
 import { 
   Lock, Check, Cloud, Globe, Database, AlertCircle, 
   Server, Download, Upload, ShieldCheck, RefreshCw, Radio
 } from 'lucide-react';
-import { syncService, CloudConfig } from '../services/syncService';
+import { syncService } from '../services/syncService';
 
 interface SettingsProps {
   currentUser: User;

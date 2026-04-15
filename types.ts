@@ -119,3 +119,9 @@ export interface Project {
   startDate: string;
   endDate: string;
 }
+
+export interface CloudConfig {
+  apiUrl: string;
+  apiKey: string;
+  active: boolean;
+}

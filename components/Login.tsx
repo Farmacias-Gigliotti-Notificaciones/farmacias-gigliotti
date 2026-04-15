@@ -46,19 +46,8 @@ export const Login: React.FC<LoginProps> = ({ users, branches, onLogin }) => {
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand-500 to-secondary-500"></div>
 
         <div className="flex flex-col items-center mb-8 mt-2">
-            <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center mb-4 shadow-xl shadow-brand-100 border border-slate-50 p-3 transform transition-transform hover:scale-105 duration-500">
-                {/* ISOLOGO FARMACIAS GIGLIOTTI */}
-                <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#10b981" /> {/* Emerald 500 */}
-                      <stop offset="100%" stopColor="#0ea5e9" /> {/* Sky 500 */}
-                    </linearGradient>
-                  </defs>
-                  <path d="M 30 20 Q 0 50 30 80" stroke="url(#logoGrad)" strokeWidth="8" strokeLinecap="round" fill="none" />
-                  <path d="M 70 20 Q 100 50 70 80" stroke="url(#logoGrad)" strokeWidth="8" strokeLinecap="round" fill="none" />
-                  <path d="M 42 25 L 58 25 L 58 42 L 75 42 L 75 58 L 58 58 L 58 75 L 42 75 L 42 58 L 25 58 L 25 42 L 42 42 Z" fill="url(#logoGrad)" stroke="white" strokeWidth="2" strokeLinejoin="round" />
-                </svg>
+            <div className="w-32 h-32 flex items-center justify-center mb-4 transform transition-transform hover:scale-105 duration-500">
+                <img src="logo_gigliotti.png" alt="Farmacia Gigliotti" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Farmacias Gigliotti</h1>
             <p className="text-slate-500 text-sm font-medium mt-1">Portal de Gestión Interna</p>
