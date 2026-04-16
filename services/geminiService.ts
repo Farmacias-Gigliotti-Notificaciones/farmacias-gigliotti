@@ -2,7 +2,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { Project, Task, User, Branch } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: (import.meta as any).env?.VITE_API_KEY || '' });
 
 export const generateExecutiveReport = async (projects: Project[], tasks: Task[], users: User[], branches: Branch[]): Promise<string> => {
   try {

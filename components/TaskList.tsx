@@ -180,7 +180,7 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, users, currentUser, o
   };
 
   return (
-    <div className="p-4 h-full bg-slate-50 flex flex-col overflow-hidden relative">
+    <div className="p-4 h-full bg-indigo-50 flex flex-col overflow-hidden relative">
       
       {/* 🖥️ VISOR DE ARCHIVOS MAXIMIZADO GIGLIOTTI */}
       {executingFile && (

@@ -189,6 +189,20 @@ function App() {
     }
   }, [branches]);
 
+  const handleAssignMultipleTasks = useCallback(async (userId: string, taskIds: string[]) => {
+    const updatedTasks = tasks.map(t => 
+      taskIds.includes(t.id) ? { ...t, assigneeId: userId } : t
+    );
+    setTasks(updatedTasks);
+
+    // Sincronización con la nube para cada tarea reasignada
+    await Promise.all(taskIds.map(taskId => {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) return syncService.updateItem('tasks', taskId, { ...task, assigneeId: userId });
+      return Promise.resolve(true);
+    }));
+  }, [tasks]);
+
   const handleDeleteBranch = useCallback(async (branchId: string) => {
     if (window.confirm('¿Eliminar esta sucursal del servidor?')) {
       const success = await syncService.deleteItem('branches', branchId);
@@ -244,6 +258,7 @@ function App() {
           allUsers={users}
         />
       );
+      case 'team':
       case 'users': return (
         <UserManagement 
           users={visibleUsers} 
@@ -263,6 +278,7 @@ function App() {
               setUsers(users.filter(x => x.id !== id));
             }
           }} 
+          onAssignMultipleTasks={handleAssignMultipleTasks}
         />
       );
       case 'branches': return <BranchManagement branches={branches} onAddBranch={b => setBranches([...branches, b])} onUpdateBranch={handleUpdateBranch} onDeleteBranch={handleDeleteBranch} />;
@@ -273,7 +289,7 @@ function App() {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans">
+    <div className="flex min-h-screen bg-indigo-50 font-sans">
       <Sidebar 
         currentUser={currentUser} 
         activeTab={activeTab} 
@@ -282,7 +298,7 @@ function App() {
         newMessagesCount={newMessagesCount} 
         isSyncing={isSyncing}
       />
-      <main className="flex-1 ml-64 bg-slate-50 min-h-screen relative">
+      <main className="flex-1 ml-64 bg-indigo-50 min-h-screen relative">
         {isSyncing && (
           <div className="fixed top-4 right-4 z-[100] flex items-center space-x-2 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg border border-brand-100 animate-fade-in">
              <RefreshCw size={14} className="text-brand-500 animate-spin" />

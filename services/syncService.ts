@@ -3,8 +3,8 @@ import { CloudConfig } from '../types';
 export const syncService = {
   getCloudConfig(): CloudConfig {
     // Prioridad 1: Variables de Entorno (.env)
-    const envUrl = process.env.SUPABASE_URL;
-    const envKey = process.env.SUPABASE_KEY;
+    const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
+    const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
 
     if (envUrl && envKey && envUrl !== 'undefined' && envKey !== 'undefined') {
       return { apiUrl: envUrl, apiKey: envKey, active: true };
@@ -13,6 +13,18 @@ export const syncService = {
     // Prioridad 2: Configuración manual guardada (LocalStorage)
     const saved = localStorage.getItem('farmacia_cloud_config_v2');
     return saved ? JSON.parse(saved) : { apiUrl: '', apiKey: '', active: false };
+  },
+
+  async getHeaders(): Promise<HeadersInit> {
+    const config = this.getCloudConfig();
+    // Intentar obtener el token de sesión real de Supabase Auth si existe
+    const sessionToken = localStorage.getItem('supabase_access_token') || config.apiKey;
+    
+    return {
+      'apikey': config.apiKey,
+      'Authorization': `Bearer ${sessionToken}`,
+      'Content-Type': 'application/json'
+    };
   },
 
   async saveData(key: string, data: any) {
@@ -29,11 +41,7 @@ export const syncService = {
     try {
       const res = await fetch(`${cleanUrl}/rest/v1/users?select=count`, {
         method: 'GET',
-        headers: { 
-          'apikey': config.apiKey, 
-          'Authorization': `Bearer ${config.apiKey}`,
-          'Content-Type': 'application/json'
-        }
+        headers: await this.getHeaders()
       });
       
       if (res.ok) {
@@ -56,9 +64,10 @@ export const syncService = {
     
     if (config.active && cleanUrl && config.apiKey) {
       try {
+        const headers = await this.getHeaders();
         const fetchTable = async (table: string) => {
           const res = await fetch(`${cleanUrl}/rest/v1/${table}?select=*`, {
-            headers: { 'apikey': config.apiKey, 'Authorization': `Bearer ${config.apiKey}` }
+            headers
           });
           return await res.json();
         };
@@ -81,24 +90,28 @@ export const syncService = {
   async createItem(table: string, data: any): Promise<boolean> {
     const config = this.getCloudConfig();
     const cleanUrl = config.apiUrl?.replace(/\/$/, '');
-    if (!config.active || !cleanUrl || !config.apiKey) return true;
+    if (!config.active || !cleanUrl || !config.apiKey) {
+      console.warn(`Cloud sync is inactive or misconfigured. Item will not be created in Supabase for table: ${table}.`);
+      return true; // Indicate that no error occurred locally, but cloud sync was skipped.
+    }
 
     try {
       const res = await fetch(`${cleanUrl}/rest/v1/${table}`, {
         method: 'POST',
-        headers: {
-          'apikey': config.apiKey,
-          'Authorization': `Bearer ${config.apiKey}`,
-          'Content-Type': 'application/json',
+        headers: { 
+          ...(await this.getHeaders() as any),
           'Prefer': 'return=minimal'
         },
         body: JSON.stringify(data)
       });
       if (!res.ok) {
         const err = await res.json();
-        console.error(`Error Supabase POST [${table}]:`, err);
+        console.error(`Error Supabase POST [${table}]:`, res.status, err);
+        return false;
+      } else {
+        console.log(`Successfully created item in Supabase table [${table}]:`, data);
       }
-      return res.ok;
+      return true;
     } catch (e) {
       console.error(`Error creando en ${table}:`, e);
       return false;
@@ -109,7 +122,7 @@ export const syncService = {
     const config = this.getCloudConfig();
     const cleanUrl = config.apiUrl?.replace(/\/$/, '');
     if (!config.active || !cleanUrl || !config.apiKey) {
-      // Fallback local: Actualizar en LocalStorage si no hay red activa
+      // Fallback local: Update in LocalStorage if cloud sync is inactive
       console.warn(`Sincronización inactiva. El cambio en ${table} (ID: ${id}) solo es local.`);
       return true; 
     }
@@ -117,15 +130,18 @@ export const syncService = {
     try {
       const res = await fetch(`${cleanUrl}/rest/v1/${table}?id=eq.${id}`, {
         method: 'PATCH',
-        headers: {
-          'apikey': config.apiKey,
-          'Authorization': `Bearer ${config.apiKey}`,
-          'Content-Type': 'application/json',
+        headers: { 
+          ...(await this.getHeaders() as any),
           'Prefer': 'return=minimal'
         },
         body: JSON.stringify(data)
       });
-      return res.ok;
+      if (!res.ok) {
+        const err = await res.json();
+        console.error(`Error Supabase PATCH [${table}]:`, res.status, err);
+        return false;
+      }
+      return true;
     } catch (e) {
       console.error(`Error actualizando ${table}:`, e);
       return false;
@@ -140,10 +156,7 @@ export const syncService = {
     try {
       const res = await fetch(`${cleanUrl}/rest/v1/${table}?id=eq.${id}`, {
         method: 'DELETE',
-        headers: {
-          'apikey': config.apiKey,
-          'Authorization': `Bearer ${config.apiKey}`
-        }
+        headers: await this.getHeaders()
       });
       return res.ok;
     } catch (e) {

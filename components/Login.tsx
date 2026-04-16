@@ -38,7 +38,7 @@ export const Login: React.FC<LoginProps> = ({ users, branches, onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-secondary-50 flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-indigo-50 flex flex-col justify-center items-center p-4">
       
       <div className="bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl w-full max-w-md border border-white/50 relative overflow-hidden">
         

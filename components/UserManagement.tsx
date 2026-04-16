@@ -153,7 +153,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   };
 
   return (
-    <div className="p-8 space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 space-y-8 bg-indigo-50 min-h-screen">
       <div className="flex justify-between items-end border-b border-slate-200 pb-8">
         <div>
            <h1 className="text-4xl font-black text-slate-900 tracking-tighter">Gestión de Personal</h1>

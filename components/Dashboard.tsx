@@ -93,7 +93,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ tasks, role, users = [], c
   );
 
   return (
-    <div className="p-10 space-y-12 animate-fade-in bg-slate-50 min-h-screen pb-24">
+    <div className="p-10 space-y-12 animate-fade-in bg-indigo-50 min-h-screen pb-24">
       {/* Modal Detalles Usuario */}
       {selectedUserForTasks && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4" onClick={() => setSelectedUserForTasks(null)}>
