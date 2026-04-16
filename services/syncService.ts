@@ -91,7 +91,7 @@ export const syncService = {
     const config = this.getCloudConfig();
     const cleanUrl = config.apiUrl?.replace(/\/$/, '');
     if (!config.active || !cleanUrl || !config.apiKey) {
-      console.warn(`Cloud sync is inactive or misconfigured. Item will not be created in Supabase for table: ${table}.`);
+      console.error(`ERROR: La sincronización con la nube está inactiva o mal configurada. El elemento no se creará en Supabase para la tabla: ${table}.`);
       return true; // Indicate that no error occurred locally, but cloud sync was skipped.
     }
 
