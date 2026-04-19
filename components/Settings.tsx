@@ -22,6 +22,11 @@ export const Settings: React.FC<SettingsProps> = ({ currentUser, onUpdateUser })
   const [cloudConfig, setCloudConfig] = useState<CloudConfig>(syncService.getCloudConfig());
   const [isTesting, setIsTesting] = useState(false);
   const [connStatus, setConnStatus] = useState<'IDLE' | 'OK' | 'FAIL'>('IDLE');
+  const [validationMessage, setValidationMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  
+  // Retry Sync State
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryResults, setRetryResults] = useState<any>(null);
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,11 +50,23 @@ export const Settings: React.FC<SettingsProps> = ({ currentUser, onUpdateUser })
 
   const handleSaveCloudConfig = async () => {
     setIsTesting(true);
-    const isOk = await syncService.testConnection(cloudConfig);
-    setConnStatus(isOk ? 'OK' : 'FAIL');
-    localStorage.setItem('farmacia_cloud_config_v2', JSON.stringify({ ...cloudConfig, active: isOk }));
+    setValidationMessage(null);
+    const result = await syncService.testConnection(cloudConfig);
+    setConnStatus(result.success ? 'OK' : 'FAIL');
+    setValidationMessage({ 
+      type: result.success ? 'success' : 'error', 
+      text: result.message 
+    });
+    localStorage.setItem('farmacia_cloud_config_v2', JSON.stringify({ ...cloudConfig, active: result.success }));
     setIsTesting(false);
-    if(isOk) alert("Conexión con el servidor central establecida exitosamente.");
+  };
+
+  const handleRetrySync = async () => {
+    setIsRetrying(true);
+    setRetryResults(null);
+    const results = await syncService.retrySync();
+    setRetryResults(results);
+    setIsRetrying(false);
   };
 
   const handleExportDB = () => {
@@ -152,12 +169,38 @@ export const Settings: React.FC<SettingsProps> = ({ currentUser, onUpdateUser })
                         className="w-full py-5 bg-brand-600 hover:bg-brand-500 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] transition-all shadow-xl shadow-brand-600/20 active:scale-95 flex items-center justify-center space-x-3"
                     >
                         {isTesting ? <RefreshCw size={18} className="animate-spin"/> : <Server size={18}/>}
-                        <span>{isTesting ? 'Sincronizando...' : 'Vincular a la Red'}</span>
+                        <span>{isTesting ? 'Validando...' : 'Vincular a la Red'}</span>
                     </button>
 
-                    <p className="text-[10px] text-slate-500 font-bold text-center leading-relaxed">
-                        Una vez vinculado, los datos se sincronizarán en tiempo real con todas las sucursales conectadas a este servidor.
-                    </p>
+                    {validationMessage && (
+                        <div className={`p-4 rounded-xl flex items-start space-x-3 text-[10px] font-bold animate-fade-in whitespace-pre-line ${validationMessage.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                            {validationMessage.type === 'success' ? <Check size={16} className="flex-shrink-0 mt-0.5"/> : <AlertCircle size={16} className="flex-shrink-0 mt-0.5"/>}
+                            <span>{validationMessage.text}</span>
+                        </div>
+                    )}
+
+                    <button 
+                        onClick={handleRetrySync}
+                        disabled={isRetrying || connStatus !== 'OK'}
+                        className="w-full py-4 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:opacity-50 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center space-x-3"
+                    >
+                        {isRetrying ? <RefreshCw size={16} className="animate-spin"/> : <Cloud size={16}/>}
+                        <span>{isRetrying ? 'Sincronizando...' : 'Reintenttar Sincronización'}</span>
+                    </button>
+
+                    {retryResults && (
+                        <div className="mt-4 space-y-2 p-4 rounded-xl bg-slate-800 border border-slate-700">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase mb-3">Resultados de Sincronización:</p>
+                            {retryResults.results.map((r: any, i: number) => (
+                                <div key={i} className="text-[9px] text-slate-300 flex justify-between">
+                                    <span>{r.table}:</span>
+                                    <span className={r.errors === 0 ? 'text-emerald-400' : 'text-yellow-400'}>
+                                        {r.synced} OK{r.errors > 0 ? ` / ${r.errors} errores` : ''}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 

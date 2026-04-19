@@ -12,6 +12,8 @@ import { GlobalChat } from './components/GlobalChat';
 import { MOCK_PROJECTS, MOCK_TASKS, MOCK_USERS, MOCK_BRANCHES } from './constants';
 import { Task, User, UserRole, Branch, Project, TaskStatus } from './types';
 import { syncService } from './services/syncService';
+import { testFullSync } from './services/testSync';
+import { runDiagnostic } from './services/diagnostic';
 import { Cloud, RefreshCw } from 'lucide-react';
 
 const STORAGE_KEYS = {
@@ -64,10 +66,10 @@ function App() {
     initApp();
   }, []);
 
-  // Sincronización automática con la "Nube"
+  // Sincronización automática con Supabase (localStorage + cloud)
   const performSync = useCallback(async (key: string, data: any) => {
     setIsSyncing(true);
-    await syncService.saveData(key, data);
+    await syncService.syncDataToCloud(key, data);
     setTimeout(() => setIsSyncing(false), 500); // Feedback visual
   }, []);
 
@@ -189,6 +191,11 @@ function App() {
     }
   }, [branches]);
 
+  const handleAddBranch = useCallback(async (newBranch: Branch) => {
+    setBranches(prev => [...prev, newBranch]);
+    await syncService.createItem('branches', newBranch);
+  }, []);
+
   const handleAssignMultipleTasks = useCallback(async (userId: string, taskIds: string[]) => {
     const updatedTasks = tasks.map(t => 
       taskIds.includes(t.id) ? { ...t, assigneeId: userId } : t
@@ -281,7 +288,7 @@ function App() {
           onAssignMultipleTasks={handleAssignMultipleTasks}
         />
       );
-      case 'branches': return <BranchManagement branches={branches} onAddBranch={b => setBranches([...branches, b])} onUpdateBranch={handleUpdateBranch} onDeleteBranch={handleDeleteBranch} />;
+      case 'branches': return <BranchManagement branches={branches} onAddBranch={handleAddBranch} onUpdateBranch={handleUpdateBranch} onDeleteBranch={handleDeleteBranch} />;
       case 'activity': return <UserAnalytics users={visibleUsers} />;
       case 'settings': return <Settings currentUser={currentUser} onUpdateUser={u => setUsers(users.map(x => x.id === u.id ? u : x))} />;
       default: return <div className="p-8 text-center text-slate-400">Sección en construcción</div>;
