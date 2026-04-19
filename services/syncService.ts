@@ -155,12 +155,21 @@ export const syncService = {
         try {
           if (cloudIds.has(item.id)) {
             // Item existe en Supabase → actualizar
-            await this.updateItem(tableName, item.id, item);
-            synced++;
+            const updateSuccess = await this.updateItem(tableName, item.id, item);
+            if (updateSuccess) {
+              synced++;
+            } else {
+              errors++;
+            }
           } else {
             // Item es nuevo → crear
-            await this.createItem(tableName, item);
-            synced++;
+            const createSuccess = await this.createItem(tableName, item);
+            if (createSuccess) {
+              synced++;
+            } else {
+              errors++;
+              console.warn(`Error al crear ${item.id} en ${tableName}`);
+            }
           }
         } catch (itemError) {
           console.error(`Error sincronizando ${item.id}:`, itemError);
@@ -364,29 +373,52 @@ export const syncService = {
     const config = this.getCloudConfig();
     const cleanUrl = config.apiUrl?.replace(/\/$/, '');
     if (!config.active || !cleanUrl || !config.apiKey) {
-      console.error(`ERROR: La sincronización con la nube está inactiva o mal configurada. El elemento no se creará en Supabase para la tabla: ${table}.`);
-      return true; // Indicate that no error occurred locally, but cloud sync was skipped.
+      console.log(`Cloud inactivo. Elemento no se creará en Supabase para la tabla: ${table}, ID: ${data.id}`);
+      return true; // Retorna true porque el guardado local ya ocurrió
     }
 
     try {
-      const res = await fetch(`${cleanUrl}/rest/v1/${table}`, {
+      // Filtrar solo los campos que Supabase espera para cada tabla
+      let cleanData = { ...data };
+      
+      if (table === 'tasks') {
+        // Para tasks, mantener solo los campos que existen en Supabase
+        // NOTA: recurrenceDays, recurrenceMonths, recurrenceHours, allowedChatRoles NO existen en Supabase
+        const allowedTaskFields = [
+          'id', 'title', 'description', 'status', 'priority', 'assigneeId', 'creatorId',
+          'creatorName', 'createdAt', 'targetRoles', 'projectId', 'rating', 'feedback',
+          'startDate', 'startTime', 'dueDate', 'offerEndDate', 'comments', 'attachments',
+          'executionLogs'
+        ];
+        cleanData = Object.fromEntries(
+          Object.entries(cleanData).filter(([key]) => allowedTaskFields.includes(key))
+        );
+      }
+      
+      const response = await fetch(`${cleanUrl}/rest/v1/${table}`, {
         method: 'POST',
         headers: { 
           ...(await this.getHeaders() as any),
           'Prefer': 'return=minimal'
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(cleanData)
       });
-      if (!res.ok) {
-        const err = await res.json();
-        console.error(`Error Supabase POST [${table}]:`, res.status, err);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Error al crear en Supabase [${table}] (ID: ${data.id}):`, {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+          dataEnviado: cleanData
+        });
         return false;
-      } else {
-        console.log(`Successfully created item in Supabase table [${table}]:`, data);
       }
+      
+      console.log(`✅ Elemento creado en Supabase [${table}]:`, data.id);
       return true;
     } catch (e) {
-      console.error(`Error creando en ${table}:`, e);
+      console.error(`❌ Error creando en ${table} (ID: ${data.id}):`, e);
       return false;
     }
   },
@@ -395,28 +427,52 @@ export const syncService = {
     const config = this.getCloudConfig();
     const cleanUrl = config.apiUrl?.replace(/\/$/, '');
     if (!config.active || !cleanUrl || !config.apiKey) {
-      // Fallback local: Update in LocalStorage if cloud sync is inactive
-      console.warn(`Sincronización inactiva. El cambio en ${table} (ID: ${id}) solo es local.`);
+      console.log(`Cloud inactivo. Cambio en ${table} (ID: ${id}) solo es local.`);
       return true; 
     }
 
     try {
-      const res = await fetch(`${cleanUrl}/rest/v1/${table}?id=eq.${id}`, {
+      // Filtrar solo los campos que Supabase espera para cada tabla
+      let cleanData = { ...data };
+      
+      if (table === 'tasks') {
+        // Para tasks, mantener solo los campos que existen en Supabase
+        // NOTA: recurrenceDays, recurrenceMonths, recurrenceHours, allowedChatRoles NO existen en Supabase
+        const allowedTaskFields = [
+          'id', 'title', 'description', 'status', 'priority', 'assigneeId', 'creatorId',
+          'creatorName', 'createdAt', 'targetRoles', 'projectId', 'rating', 'feedback',
+          'startDate', 'startTime', 'dueDate', 'offerEndDate', 'comments', 'attachments',
+          'executionLogs'
+        ];
+        cleanData = Object.fromEntries(
+          Object.entries(cleanData).filter(([key]) => allowedTaskFields.includes(key))
+        );
+      }
+      
+      const response = await fetch(`${cleanUrl}/rest/v1/${table}?id=eq.${id}`, {
         method: 'PATCH',
         headers: { 
           ...(await this.getHeaders() as any),
           'Prefer': 'return=minimal'
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(cleanData)
       });
-      if (!res.ok) {
-        const err = await res.json();
-        console.error(`Error Supabase PATCH [${table}]:`, res.status, err);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Error al actualizar en Supabase [${table}] (ID: ${id}):`, {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+          dataEnviado: cleanData
+        });
         return false;
       }
+      
+      console.log(`✅ Elemento actualizado en Supabase [${table}]:`, id);
       return true;
     } catch (e) {
-      console.error(`Error actualizando ${table}:`, e);
+      console.error(`❌ Error actualizando ${table} (ID: ${id}):`, e);
       return false;
     }
   },

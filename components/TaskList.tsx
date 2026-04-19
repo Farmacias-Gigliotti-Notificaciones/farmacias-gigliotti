@@ -155,11 +155,12 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, users, currentUser, o
     e.preventDefault();
     if (!formData.title || selectedAssigneeIds.length === 0) return;
     if (formMode === 'CREATE') {
-      selectedAssigneeIds.forEach((uid, index) => {
-        const targetUser = users.find(u => u.id === uid);
-        const targetRole = targetUser ? targetUser.role : UserRole.USUARIO;
-        onAddTask({ ...formData, id: `t-${Date.now()}-${index}`, status: TaskStatus.PENDIENTE, assigneeId: uid, creatorId: currentUser.id, creatorName: currentUser.name, createdAt: new Date().toISOString(), targetRoles: [targetRole], dueDate: noDueDateNew ? '' : (formData.dueDate || ''), comments: [], executionLogs: [], attachments: formData.attachments || [], executableFile: formData.executableFile, allowedChatRoles: formData.allowedChatRoles || [] } as Task);
-      });
+      // Crear una sola tarea con el PRIMER usuario seleccionado
+      const uid = selectedAssigneeIds[0];
+      const targetUser = users.find(u => u.id === uid);
+      const targetRole = targetUser ? targetUser.role : UserRole.USUARIO;
+      const taskId = crypto.randomUUID();
+      onAddTask({ ...formData, id: taskId, status: TaskStatus.PENDIENTE, assigneeId: uid, creatorId: currentUser.id, creatorName: currentUser.name, createdAt: new Date().toISOString(), targetRoles: [targetRole], dueDate: noDueDateNew ? '' : (formData.dueDate || ''), comments: [], executionLogs: [], attachments: formData.attachments || [], executableFile: formData.executableFile, allowedChatRoles: formData.allowedChatRoles || [] } as Task);
     } else if (formMode === 'EDIT' && selectedTask) {
       const updatedOriginal = { ...selectedTask, ...formData, dueDate: noDueDateNew ? '' : (formData.dueDate || ''), assigneeId: selectedAssigneeIds[0] } as Task;
       onUpdateTask(updatedOriginal);

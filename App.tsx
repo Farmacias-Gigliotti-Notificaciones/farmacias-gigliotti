@@ -138,8 +138,8 @@ function App() {
   }, [tasks, currentUser]);
 
   const handleUpdateTask = useCallback(async (updatedTask: Task) => {
+    // Actualizar estado local - el useEffect automático se encargará de sincronizar a Supabase
     setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
-    await syncService.updateItem('tasks', updatedTask.id, updatedTask);
     
     const lastMsg = updatedTask.comments[updatedTask.comments.length - 1];
     if (lastMsg && lastMsg.userId === currentUser?.id) {
@@ -148,8 +148,8 @@ function App() {
   }, [currentUser?.id, handleMarkChannelAsRead]);
 
   const handleAddTask = async (newTask: Task) => { 
-    setTasks(prev => [...prev, newTask]); 
-    await syncService.createItem('tasks', newTask);
+    // Agregar al estado local - el useEffect automático se encargará de sincronizar a Supabase
+    setTasks(prev => [...prev, newTask]);
   };
 
   const handleDeleteTask = useCallback(async (taskId: string) => {
