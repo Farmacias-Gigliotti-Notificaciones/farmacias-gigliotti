@@ -70,19 +70,35 @@ function App() {
     initApp();
   }, []);
 
-  // Sincronización automática con Supabase (localStorage + cloud)
-  const performSync = useCallback(async (key: string, data: any) => {
-    setIsSyncing(true);
-    await syncService.syncDataToCloud(key, data);
-    setTimeout(() => setIsSyncing(false), 500); // Feedback visual
+  // Cola de sincronización con debounce: guarda local inmediato, agrupa llamadas a Supabase
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingKeys = useRef<Set<string>>(new Set<string>());
+
+  const queueSync = useCallback((key: string, data: any) => {
+    // Guardar localmente de forma inmediata — nunca se pierde nada
+    localStorage.setItem(key, JSON.stringify(data));
+    pendingKeys.current.add(key);
+
+    // Reiniciar el timer: si hay cambios en cadena, espera 2s desde el último
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(async () => {
+      const keys = Array.from(pendingKeys.current);
+      pendingKeys.current.clear();
+      setIsSyncing(true);
+      for (const k of keys) {
+        const stored = localStorage.getItem(k);
+        if (stored) await syncService.syncDataToCloud(k, JSON.parse(stored));
+      }
+      setIsSyncing(false);
+    }, 2000);
   }, []);
 
-  useEffect(() => { if (!isLoading) performSync(STORAGE_KEYS.USERS, users); }, [users, isLoading]);
-  useEffect(() => { if (!isLoading) performSync(STORAGE_KEYS.TASKS, tasks); }, [tasks, isLoading]);
-  useEffect(() => { if (!isLoading) performSync(STORAGE_KEYS.BRANCHES, branches); }, [branches, isLoading]);
-  useEffect(() => { if (!isLoading) performSync(STORAGE_KEYS.PROJECTS, projects); }, [projects, isLoading]);
-  useEffect(() => { if (!isLoading) performSync(STORAGE_KEYS.LAST_SEEN_MAP, lastSeenMap); }, [lastSeenMap, isLoading]);
-  useEffect(() => { if (!isLoading) performSync(STORAGE_KEYS.HIDDEN_CHATS, hiddenChats); }, [hiddenChats, isLoading]);
+  useEffect(() => { if (!isLoading) queueSync(STORAGE_KEYS.USERS, users); }, [users, isLoading]);
+  useEffect(() => { if (!isLoading) queueSync(STORAGE_KEYS.TASKS, tasks); }, [tasks, isLoading]);
+  useEffect(() => { if (!isLoading) queueSync(STORAGE_KEYS.BRANCHES, branches); }, [branches, isLoading]);
+  useEffect(() => { if (!isLoading) queueSync(STORAGE_KEYS.PROJECTS, projects); }, [projects, isLoading]);
+  useEffect(() => { if (!isLoading) queueSync(STORAGE_KEYS.LAST_SEEN_MAP, lastSeenMap); }, [lastSeenMap, isLoading]);
+  useEffect(() => { if (!isLoading) queueSync(STORAGE_KEYS.HIDDEN_CHATS, hiddenChats); }, [hiddenChats, isLoading]);
   useEffect(() => { if (!isLoading) localStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(customProfiles)); }, [customProfiles, isLoading]);
   useEffect(() => { 
     if (currentUser) localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(currentUser));

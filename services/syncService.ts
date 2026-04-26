@@ -51,6 +51,14 @@ import { CloudConfig } from '../types';
  *   - endDate: date
  */
 
+const TASK_SYNC_FIELDS = [
+  'id', 'title', 'description', 'status', 'priority', 'assigneeId', 'creatorId',
+  'creatorName', 'createdAt', 'targetRoles', 'projectId', 'rating', 'feedback',
+  'startDate', 'startTime', 'dueDate', 'offerEndDate', 'comments', 'attachments',
+  'executionLogs', 'recurrence', 'recurrenceDays', 'recurrenceMonths', 'recurrenceHours',
+  'allowedChatRoles'
+];
+
 export const syncService = {
   getCloudConfig(): CloudConfig {
     // Prioridad 1: Variables de Entorno (.env)
@@ -382,19 +390,11 @@ export const syncService = {
       let cleanData = { ...data };
       
       if (table === 'tasks') {
-        // Para tasks, mantener solo los campos que existen en Supabase
-        // NOTA: recurrenceDays, recurrenceMonths, recurrenceHours, allowedChatRoles NO existen en Supabase
-        const allowedTaskFields = [
-          'id', 'title', 'description', 'status', 'priority', 'assigneeId', 'creatorId',
-          'creatorName', 'createdAt', 'targetRoles', 'projectId', 'rating', 'feedback',
-          'startDate', 'startTime', 'dueDate', 'offerEndDate', 'comments', 'attachments',
-          'executionLogs'
-        ];
         cleanData = Object.fromEntries(
-          Object.entries(cleanData).filter(([key]) => allowedTaskFields.includes(key))
+          Object.entries(cleanData).filter(([key]) => TASK_SYNC_FIELDS.includes(key))
         );
       }
-      
+
       const response = await fetch(`${cleanUrl}/rest/v1/${table}`, {
         method: 'POST',
         headers: { 
@@ -436,19 +436,11 @@ export const syncService = {
       let cleanData = { ...data };
       
       if (table === 'tasks') {
-        // Para tasks, mantener solo los campos que existen en Supabase
-        // NOTA: recurrenceDays, recurrenceMonths, recurrenceHours, allowedChatRoles NO existen en Supabase
-        const allowedTaskFields = [
-          'id', 'title', 'description', 'status', 'priority', 'assigneeId', 'creatorId',
-          'creatorName', 'createdAt', 'targetRoles', 'projectId', 'rating', 'feedback',
-          'startDate', 'startTime', 'dueDate', 'offerEndDate', 'comments', 'attachments',
-          'executionLogs'
-        ];
         cleanData = Object.fromEntries(
-          Object.entries(cleanData).filter(([key]) => allowedTaskFields.includes(key))
+          Object.entries(cleanData).filter(([key]) => TASK_SYNC_FIELDS.includes(key))
         );
       }
-      
+
       const response = await fetch(`${cleanUrl}/rest/v1/${table}?id=eq.${id}`, {
         method: 'PATCH',
         headers: { 
