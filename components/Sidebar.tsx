@@ -1,11 +1,11 @@
 
 import React from 'react';
 import { UserRole, User } from '../types';
-import { 
-  LayoutDashboard, 
-  FolderKanban, 
-  Users, 
-  Settings, 
+import {
+  LayoutDashboard,
+  FolderKanban,
+  Users,
+  Settings,
   LogOut,
   UserCog,
   BarChart2,
@@ -13,7 +13,8 @@ import {
   MessageSquare,
   Cloud,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  Tag
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -38,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeTab, setAct
     { id: 'team', label: 'Gestión Equipo', icon: Users, show: isManager },
     { divider: true, label: 'Corporativo', show: isAdmin },
     { id: 'users', label: 'Usuarios y Roles', icon: UserCog, show: isAdmin },
+    { id: 'profiles', label: 'Perfiles', icon: Tag, show: isAdmin },
     { id: 'branches', label: 'Sucursales Gigliotti', icon: Building2, show: canManageBranches },
     { id: 'activity', label: 'Métricas de Uso', icon: BarChart2, show: isAdmin },
   ];

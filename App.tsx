@@ -9,8 +9,9 @@ import { BranchManagement } from './components/BranchManagement';
 import { UserAnalytics } from './components/UserAnalytics';
 import { Settings } from './components/Settings';
 import { GlobalChat } from './components/GlobalChat';
+import { ProfileManagement } from './components/ProfileManagement';
 import { MOCK_PROJECTS, MOCK_TASKS, MOCK_USERS, MOCK_BRANCHES } from './constants';
-import { Task, User, UserRole, Branch, Project, TaskStatus } from './types';
+import { Task, User, UserRole, Branch, Project, TaskStatus, Profile } from './types';
 import { syncService } from './services/syncService';
 import { testFullSync } from './services/testSync';
 import { runDiagnostic } from './services/diagnostic';
@@ -21,6 +22,7 @@ const STORAGE_KEYS = {
   TASKS: 'farmacia_tasks_v2',
   BRANCHES: 'farmacia_branches_v2',
   PROJECTS: 'farmacia_projects_v2',
+  PROFILES: 'farmacia_profiles_v2',
   SESSION: 'farmacia_session_v2',
   TAB: 'farmacia_active_tab_v2',
   LAST_SEEN_MAP: 'farmacia_last_seen_per_user_v2',
@@ -38,6 +40,7 @@ function App() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   
+  const [customProfiles, setCustomProfiles] = useState<Profile[]>([]);
   const [lastSeenMap, setLastSeenMap] = useState<Record<string, Record<string, number>>>({});
   const [hiddenChats, setHiddenChats] = useState<string[]>([]);
 
@@ -58,6 +61,7 @@ function App() {
       const tab = localStorage.getItem(STORAGE_KEYS.TAB);
       if (tab) setActiveTab(JSON.parse(tab));
 
+      setCustomProfiles(JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILES) || '[]'));
       setLastSeenMap(JSON.parse(localStorage.getItem(STORAGE_KEYS.LAST_SEEN_MAP) || '{}'));
       setHiddenChats(JSON.parse(localStorage.getItem(STORAGE_KEYS.HIDDEN_CHATS) || '[]'));
       
@@ -79,6 +83,7 @@ function App() {
   useEffect(() => { if (!isLoading) performSync(STORAGE_KEYS.PROJECTS, projects); }, [projects, isLoading]);
   useEffect(() => { if (!isLoading) performSync(STORAGE_KEYS.LAST_SEEN_MAP, lastSeenMap); }, [lastSeenMap, isLoading]);
   useEffect(() => { if (!isLoading) performSync(STORAGE_KEYS.HIDDEN_CHATS, hiddenChats); }, [hiddenChats, isLoading]);
+  useEffect(() => { if (!isLoading) localStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(customProfiles)); }, [customProfiles, isLoading]);
   useEffect(() => { 
     if (currentUser) localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(currentUser));
     else localStorage.removeItem(STORAGE_KEYS.SESSION);
@@ -269,25 +274,38 @@ function App() {
       );
       case 'team':
       case 'users': return (
-        <UserManagement 
-          users={visibleUsers} 
-          branches={branches} 
-          tasks={tasks} 
-          currentUser={currentUser} 
+        <UserManagement
+          users={visibleUsers}
+          branches={branches}
+          tasks={tasks}
+          currentUser={currentUser}
+          profiles={customProfiles}
           onAddUser={async u => {
             setUsers([...users, u]);
             await syncService.createItem('users', u);
-          }} 
+          }}
           onUpdateUser={async u => {
             setUsers(users.map(x => x.id === u.id ? u : x));
             await syncService.updateItem('users', u.id, u);
-          }} 
+          }}
           onDeleteUser={async id => {
             if (await syncService.deleteItem('users', id)) {
               setUsers(users.filter(x => x.id !== id));
             }
-          }} 
+          }}
           onAssignMultipleTasks={handleAssignMultipleTasks}
+        />
+      );
+      case 'profiles': return (
+        <ProfileManagement
+          profiles={customProfiles}
+          users={users}
+          onAddProfile={p => setCustomProfiles(prev => [...prev, p])}
+          onUpdateProfile={p => setCustomProfiles(prev => prev.map(x => x.id === p.id ? p : x))}
+          onDeleteProfile={id => {
+            setCustomProfiles(prev => prev.filter(x => x.id !== id));
+            setUsers(prev => prev.map(u => ({ ...u, profiles: u.profiles?.filter(pid => pid !== id) })));
+          }}
         />
       );
       case 'branches': return <BranchManagement branches={branches} onAddBranch={handleAddBranch} onUpdateBranch={handleUpdateBranch} onDeleteBranch={handleDeleteBranch} />;

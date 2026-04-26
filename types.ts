@@ -62,6 +62,13 @@ export interface UserUsageStats {
   year: number;
 }
 
+export interface Profile {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -71,6 +78,7 @@ export interface User {
   password?: string;
   lastLogin?: string;
   usageStats?: UserUsageStats;
+  profiles?: string[];
 }
 
 export interface Comment {

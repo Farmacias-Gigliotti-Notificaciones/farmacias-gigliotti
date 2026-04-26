@@ -1,9 +1,9 @@
 
 import React, { useState, useRef } from 'react';
-import { Branch, User, UserRole, Task, TaskStatus } from '../types';
+import { Branch, User, UserRole, Task, TaskStatus, Profile } from '../types';
 import {
   Edit2, Plus, Save, X, Trash2, ShieldAlert, MapPin,
-  CheckCircle2, ChevronRight, Check, Users, Camera, Image as ImageIcon, KeyRound
+  CheckCircle2, ChevronRight, Check, Users, Camera, Image as ImageIcon, KeyRound, Tag
 } from 'lucide-react';
 
 interface UserManagementProps {
@@ -11,14 +11,15 @@ interface UserManagementProps {
   branches: Branch[];
   tasks: Task[];
   currentUser: User;
+  profiles: Profile[];
   onAddUser: (user: User) => void;
   onUpdateUser: (user: User) => void;
   onDeleteUser: (userId: string) => void;
   onAssignMultipleTasks?: (userId: string, taskIds: string[]) => void;
 }
 
-export const UserManagement: React.FC<UserManagementProps> = ({ 
-  users, branches, tasks, currentUser, onAddUser, onUpdateUser, onDeleteUser, onAssignMultipleTasks 
+export const UserManagement: React.FC<UserManagementProps> = ({
+  users, branches, tasks, currentUser, profiles, onAddUser, onUpdateUser, onDeleteUser, onAssignMultipleTasks
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -202,7 +203,20 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                     <img className="h-12 w-12 rounded-2xl border-2 border-white shadow-sm object-cover" src={user.avatar} alt="" />
                     <div>
                       <div className="text-sm font-black text-slate-800">{user.name}</div>
-                      <div className="text-[9px] font-bold text-slate-400 uppercase">ID: {user.id}</div>
+                      <div className="text-[9px] font-bold text-slate-400 uppercase mb-1">ID: {user.id.slice(0, 8)}...</div>
+                      {user.profiles && user.profiles.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {user.profiles.map(pid => {
+                            const prof = profiles.find(p => p.id === pid);
+                            if (!prof) return null;
+                            return (
+                              <span key={pid} className="px-2 py-0.5 rounded-lg text-[9px] font-black text-white" style={{ backgroundColor: prof.color }}>
+                                {prof.name}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </td>
@@ -310,6 +324,44 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                                     {branches.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
                                 </select>
                             </div>
+
+                            {profiles.length > 0 && (
+                              <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1 flex items-center space-x-2">
+                                  <Tag size={12} className="inline mr-1" />
+                                  Perfiles adicionales
+                                </label>
+                                <div className="flex flex-wrap gap-2">
+                                  {profiles.map(profile => {
+                                    const selected = (formData.profiles || []).includes(profile.id);
+                                    return (
+                                      <button
+                                        key={profile.id}
+                                        type="button"
+                                        onClick={() => {
+                                          const current = formData.profiles || [];
+                                          setFormData({
+                                            ...formData,
+                                            profiles: selected
+                                              ? current.filter(id => id !== profile.id)
+                                              : [...current, profile.id]
+                                          });
+                                        }}
+                                        className="px-3 py-1.5 rounded-xl text-xs font-black border-2 transition-all"
+                                        style={{
+                                          borderColor: profile.color,
+                                          backgroundColor: selected ? profile.color : 'transparent',
+                                          color: selected ? 'white' : profile.color,
+                                        }}
+                                      >
+                                        {selected && <Check size={10} className="inline mr-1" />}
+                                        {profile.name}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                         </form>
                     </div>
                 ) : (
