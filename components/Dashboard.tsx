@@ -27,7 +27,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ tasks, role, users = [], c
   }, []);
 
   const isEncargado = role === UserRole.ENCARGADO;
-  const isExecutive = [UserRole.ADMIN, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(role);
+  const isExecutive = [UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(role);
 
   const isTaskStarted = (t: Task) => {
     const start = new Date(`${t.startDate}T${t.startTime || '00:00'}`);

@@ -30,7 +30,6 @@ const STORAGE_KEYS = {
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<string>('projects');
   
@@ -46,96 +45,21 @@ function App() {
   useEffect(() => {
     const initApp = async () => {
       setIsLoading(true);
+      const data = await syncService.loadAllData();
       
-      console.log('🔄 Inicializando aplicación...');
-      
-      // Limpiar datos corruptos de localStorage
-      const keysToCheck = [STORAGE_KEYS.SESSION, STORAGE_KEYS.USERS, STORAGE_KEYS.TASKS, STORAGE_KEYS.BRANCHES, STORAGE_KEYS.PROJECTS];
-      keysToCheck.forEach(key => {
-        try {
-          const value = localStorage.getItem(key);
-          if (value) {
-            const parsed = JSON.parse(value);
-            // Si no es un array o es un objeto extraño, eliminar
-            if (!Array.isArray(parsed)) {
-              localStorage.removeItem(key);
-              console.warn(`Limpiando dato corrupto: ${key}`);
-            }
-          }
-        } catch (e) {
-          // Si no se puede parsear, eliminar
-          localStorage.removeItem(key);
-          console.warn(`Limpiando dato corrupto: ${key}`);
-        }
-      });
-      
-      // Intentar cargar del cloud/localStorage
-      const cloudData = await syncService.loadAllData();
-      
-      // SIEMPRE asegurar que "admin" existe (desde MOCK_USERS)
-      // Combinar: si cloudData tiene usuarios, agregar admin si no existe
-      let finalUsers = cloudData.users?.length > 0 ? cloudData.users : [];
-      
-      // Buscar si "admin" ya existe
-      const adminExists = finalUsers.some(u => u.name === 'admin');
-      if (!adminExists) {
-        // Agregar admin al inicio
-        const adminUser = MOCK_USERS.find(u => u.name === 'admin');
-        if (adminUser) {
-          finalUsers = [adminUser, ...finalUsers];
-        }
-      }
-      
-      // Si no hay usuarios en cloud, usar MOCK_USERS completo
-      if (finalUsers.length === 0) {
-        finalUsers = MOCK_USERS;
-      }
-      
-      const finalTasks = cloudData.tasks?.length > 0 ? cloudData.tasks : MOCK_TASKS;
-      const finalBranches = cloudData.branches?.length > 0 ? cloudData.branches : MOCK_BRANCHES;
-      const finalProjects = cloudData.projects?.length > 0 ? cloudData.projects : MOCK_PROJECTS;
-      
-      console.log('✅ Usuarios cargados:', finalUsers.map(u => ({ name: u.name, role: u.role })));
-      console.log('✅ Admin disponible:', finalUsers.find(u => u.name === 'admin'));
-      
-      setUsers(finalUsers);
-      setTasks(finalTasks);
-      setBranches(finalBranches);
-      setProjects(finalProjects);
-      
-      // Guardar datos limpios en localStorage para futuras sesiones
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(finalUsers));
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(finalTasks));
-      localStorage.setItem(STORAGE_KEYS.BRANCHES, JSON.stringify(finalBranches));
-      localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(finalProjects));
+      setUsers(data.users.length ? data.users : MOCK_USERS);
+      setTasks(data.tasks.length ? data.tasks : MOCK_TASKS);
+      setBranches(data.branches.length ? data.branches : MOCK_BRANCHES);
+      setProjects(data.projects.length ? data.projects : MOCK_PROJECTS);
       
       const session = localStorage.getItem(STORAGE_KEYS.SESSION);
-      if (session) {
-        try {
-          const parsedSession = JSON.parse(session);
-          // Validar que es un User válido (tiene propiedades esperadas)
-          if (parsedSession && typeof parsedSession === 'object' && parsedSession.id && parsedSession.name && parsedSession.role) {
-            setCurrentUser(parsedSession);
-          } else {
-            // Sesión inválida, limpiar
-            console.warn('Sesión inválida detectada, limpiando...');
-            localStorage.removeItem(STORAGE_KEYS.SESSION);
-          }
-        } catch (e) {
-          console.warn('Error al parsear sesión, limpiando...');
-          localStorage.removeItem(STORAGE_KEYS.SESSION);
-        }
-      }
+      if (session) setCurrentUser(JSON.parse(session));
       
       const tab = localStorage.getItem(STORAGE_KEYS.TAB);
       if (tab) setActiveTab(JSON.parse(tab));
 
       setLastSeenMap(JSON.parse(localStorage.getItem(STORAGE_KEYS.LAST_SEEN_MAP) || '{}'));
       setHiddenChats(JSON.parse(localStorage.getItem(STORAGE_KEYS.HIDDEN_CHATS) || '[]'));
-      
-      // Debug
-      console.log('✅ Usuarios cargados:', finalUsers.map(u => ({ id: u.id, name: u.name, role: u.role })));
-      console.log('✅ Admin usuario disponible:', finalUsers.find(u => u.name.toLowerCase() === 'admin'));
       
       setIsLoading(false);
     };
@@ -229,7 +153,7 @@ function App() {
   };
 
   const handleDeleteTask = useCallback(async (taskId: string) => {
-    const canDelete = [UserRole.ADMIN, UserRole.SOCIO, UserRole.GERENCIA, UserRole.RRHH, UserRole.SUPERVISOR, UserRole.ENCARGADO].includes(currentUser!.role);
+    const canDelete = [UserRole.SOCIO, UserRole.GERENCIA, UserRole.RRHH, UserRole.SUPERVISOR, UserRole.ENCARGADO].includes(currentUser!.role);
     
     if (!canDelete) {
       alert("No tienes permisos de auditoría para eliminar tareas.");
@@ -299,42 +223,11 @@ function App() {
     setHiddenChats(prev => [...new Set([...prev, taskId])]);
   };
 
-  const handleLogin = async (username: string, password: string) => {
-    setIsAuthenticating(true);
-    try {
-      console.log(`🔐 Intentando autenticar usuario: "${username}"`);
-      console.log('📋 Usuarios disponibles:', users.map(u => u.name));
-      
-      // Buscar usuario en el array de usuarios cargados en memoria
-      const user = users.find(u => u.name.toLowerCase() === username.toLowerCase());
-      
-      if (!user) {
-        console.error(`❌ Usuario no encontrado: "${username}"`);
-        throw new Error('Usuario no encontrado');
-      }
-      
-      console.log(`✅ Usuario encontrado:`, user);
-      
-      if (user.password !== password) {
-        console.error('❌ Contraseña incorrecta');
-        throw new Error('Contraseña incorrecta');
-      }
-      
-      console.log('✅ Contraseña correcta, autenticando...');
-      
-      // Autenticación exitosa
-      const updatedUser = { ...user, lastLogin: new Date().toISOString() };
-      setUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
-      setCurrentUser(updatedUser);
-      setActiveTab([UserRole.ADMIN, 'ENCARGADO', 'GERENCIA', 'SOCIO', 'SUPERVISOR', 'RRHH'].includes(user.role) ? 'dashboard' : 'projects');
-      
-      console.log('✅ Autenticación exitosa');
-    } catch (e) {
-      console.error('❌ Error en autenticación:', e);
-      throw e; // Re-lanzar error para que Login.tsx lo maneje y muestre
-    } finally {
-      setIsAuthenticating(false);
-    }
+  const handleLogin = (user: User) => {
+    const updatedUser = { ...user, lastLogin: new Date().toISOString() };
+    setUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
+    setCurrentUser(updatedUser);
+    setActiveTab(['ENCARGADO', 'GERENCIA', 'SOCIO', 'SUPERVISOR', 'RRHH'].includes(user.role) ? 'dashboard' : 'projects');
   };
 
   const handleLogout = () => { setCurrentUser(null); setActiveTab('projects'); };
@@ -352,7 +245,7 @@ function App() {
     );
   }
 
-  if (!currentUser) return <Login users={users} onLogin={handleLogin} isLoading={isAuthenticating} />;
+  if (!currentUser) return <Login users={users} branches={branches} onLogin={handleLogin} />;
 
   const renderContent = () => {
     const visibleUsers = (currentUser.role === UserRole.GERENCIA || currentUser.role === UserRole.SOCIO) ? users : users.filter(u => u.role !== UserRole.SOCIO);

@@ -351,74 +351,22 @@ export const syncService = {
           const res = await fetch(`${cleanUrl}/rest/v1/${table}?select=*`, {
             headers
           });
-          const data = await res.json();
-          // Si la respuesta es un error, retornar array vacío
-          if (!Array.isArray(data)) {
-            console.warn(`Datos de ${table} no son array:`, data);
-            return [];
-          }
-          return data;
+          return await res.json();
         };
-        
-        const cloudData = {
+        return {
           users: await fetchTable('users'),
           tasks: await fetchTable('tasks'),
           branches: await fetchTable('branches'),
           projects: await fetchTable('projects')
         };
-        
-        console.log('✅ Datos cargados desde Supabase', cloudData);
-        return cloudData;
-      } catch (e) { 
-        console.error("❌ Error cargando desde Supabase:", e);
-        // En caso de error, caer al fallback de localStorage
-      }
+      } catch (e) { console.error("Error Sync."); }
     }
-    
-    // Fallback: localStorage o arrays vacíos
-    const localData = {
+    return {
       users: JSON.parse(localStorage.getItem('farmacia_users_v2') || '[]'),
       tasks: JSON.parse(localStorage.getItem('farmacia_tasks_v2') || '[]'),
       branches: JSON.parse(localStorage.getItem('farmacia_branches_v2') || '[]'),
       projects: JSON.parse(localStorage.getItem('farmacia_projects_v2') || '[]')
     };
-    
-    console.log('📦 Datos desde localStorage:', localData);
-    return localData;
-  },
-
-  async authenticateUser(username: string, password: string): Promise<any | null> {
-    /**
-     * Autentica un usuario por nombre de usuario y contraseña.
-     * Busca primero en localStorage, luego en Supabase si está activo.
-     * Retorna el usuario completo (con role y branch) si las credenciales son correctas.
-     * Retorna null si el usuario no existe o la contraseña es incorrecta.
-     */
-    try {
-      // 1. Cargar usuarios desde localStorage
-      const users = JSON.parse(localStorage.getItem('farmacia_users_v2') || '[]');
-      
-      // 2. Buscar usuario por nombre (case-insensitive)
-      const user = users.find((u: any) => u.name.toLowerCase() === username.toLowerCase());
-      
-      if (!user) {
-        console.warn(`❌ Usuario no encontrado: ${username}`);
-        return null;
-      }
-      
-      // 3. Validar contraseña
-      if (user.password !== password) {
-        console.warn(`❌ Contraseña incorrecta para usuario: ${username}`);
-        return null;
-      }
-      
-      // 4. Retornar usuario completo con role y branch
-      console.log(`✅ Autenticación exitosa para: ${username}`);
-      return user;
-    } catch (e) {
-      console.error(`❌ Error en autenticación:`, e);
-      return null;
-    }
   },
 
   async createItem(table: string, data: any): Promise<boolean> {

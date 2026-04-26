@@ -34,7 +34,6 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const canManage = (targetUser?: User) => {
-    if (currentUser.role === UserRole.ADMIN) return true;
     if (currentUser.role === UserRole.RRHH) {
         if (!targetUser) return true;
         return [UserRole.USUARIO, UserRole.ENCARGADO, UserRole.SUPERVISOR].includes(targetUser.role);
