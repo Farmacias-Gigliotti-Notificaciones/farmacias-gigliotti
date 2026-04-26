@@ -67,8 +67,8 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, users, currentUser, o
   const exeInputRef = useRef<HTMLInputElement>(null);
   const attachInputRef = useRef<HTMLInputElement>(null);
 
-  const isSuperior = [UserRole.ENCARGADO, UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
-  const canSeeAudit = [UserRole.ENCARGADO, UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
+  const isSuperior = [UserRole.ADMIN, UserRole.ENCARGADO, UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
+  const canSeeAudit = [UserRole.ADMIN, UserRole.ENCARGADO, UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
 
   const filteredTasks = useMemo(() => {
     if (currentUser.role === UserRole.USUARIO) return tasks.filter(t => t.assigneeId === currentUser.id);

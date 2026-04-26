@@ -22,6 +22,10 @@ export const MOCK_BRANCHES: Branch[] = [
 
 export const MOCK_USERS: User[] = [
   { 
+    id: '550e8400-e29b-41d4-a716-446655440000', name: 'admin', role: UserRole.ADMIN, branch: 'Global', avatar: 'https://picsum.photos/id/100/100/100', password: 'admin123',
+    lastLogin: null, usageStats: { week: 0, month: 0, year: 0 }
+  },
+  { 
     id: '550e8400-e29b-41d4-a716-446655440001', name: 'Ana Lopez', role: UserRole.USUARIO, branch: 'Sucursal Norte', avatar: 'https://picsum.photos/id/101/100/100', password: '1234',
     lastLogin: `${today}T09:00:00`, usageStats: { week: 35, month: 140, year: 1200 }
   },

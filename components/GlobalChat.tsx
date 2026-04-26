@@ -25,6 +25,7 @@ export const GlobalChat: React.FC<GlobalChatProps> = ({
   // Identificación crítica de moderadores (SUPERVISOR INCLUIDO)
   const isHighHierarchy = useMemo(() => {
     const highRoles = [
+      UserRole.ADMIN,
       UserRole.SOCIO, 
       UserRole.GERENCIA, 
       UserRole.RRHH, 

@@ -26,10 +26,10 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeTab, setActiveTab, onLogout, newMessagesCount = 0, isSyncing = false }) => {
-  const isAdmin = [UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
-  const isHighLevel = [UserRole.ENCARGADO, UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
-  const isManager = [UserRole.ENCARGADO, UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
-  const canManageBranches = [UserRole.GERENCIA, UserRole.SOCIO].includes(currentUser.role);
+  const isAdmin = [UserRole.ADMIN, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
+  const isHighLevel = [UserRole.ADMIN, UserRole.ENCARGADO, UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
+  const isManager = [UserRole.ADMIN, UserRole.ENCARGADO, UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
+  const canManageBranches = [UserRole.ADMIN, UserRole.GERENCIA, UserRole.SOCIO].includes(currentUser.role);
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard Operativo', icon: LayoutDashboard, show: isHighLevel },
