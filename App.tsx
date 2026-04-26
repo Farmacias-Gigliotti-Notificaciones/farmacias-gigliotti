@@ -95,12 +95,14 @@ function App() {
       if (hiddenChats.includes(task.id) || task.comments.length === 0) return total;
       
       let canAccess = false;
-      if (currentUser.role === UserRole.USUARIO) {
+      if (currentUser.role === UserRole.ADMIN) {
+          canAccess = true;
+      } else if (currentUser.role === UserRole.USUARIO) {
           canAccess = task.assigneeId === currentUser.id || task.creatorId === currentUser.id;
       } else {
           const isRoleAllowed = task.allowedChatRoles && task.allowedChatRoles.includes(currentUser.role);
           if (isRoleAllowed) {
-              if ([UserRole.SOCIO, UserRole.GERENCIA, UserRole.RRHH, UserRole.SUPERVISOR].includes(currentUser.role)) {
+              if ([UserRole.ADMIN, UserRole.SOCIO, UserRole.GERENCIA, UserRole.RRHH, UserRole.SUPERVISOR].includes(currentUser.role)) {
                   canAccess = true;
               } else {
                   const assignee = users.find(u => u.id === task.assigneeId);
@@ -153,7 +155,7 @@ function App() {
   };
 
   const handleDeleteTask = useCallback(async (taskId: string) => {
-    const canDelete = [UserRole.SOCIO, UserRole.GERENCIA, UserRole.RRHH, UserRole.SUPERVISOR, UserRole.ENCARGADO].includes(currentUser!.role);
+    const canDelete = [UserRole.ADMIN, UserRole.SOCIO, UserRole.GERENCIA, UserRole.RRHH, UserRole.SUPERVISOR, UserRole.ENCARGADO].includes(currentUser!.role);
     
     if (!canDelete) {
       alert("No tienes permisos de auditoría para eliminar tareas.");
@@ -227,7 +229,7 @@ function App() {
     const updatedUser = { ...user, lastLogin: new Date().toISOString() };
     setUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
     setCurrentUser(updatedUser);
-    setActiveTab(['ENCARGADO', 'GERENCIA', 'SOCIO', 'SUPERVISOR', 'RRHH'].includes(user.role) ? 'dashboard' : 'projects');
+    setActiveTab(['ADMIN', 'ENCARGADO', 'GERENCIA', 'SOCIO', 'SUPERVISOR', 'RRHH'].includes(user.role) ? 'dashboard' : 'projects');
   };
 
   const handleLogout = () => { setCurrentUser(null); setActiveTab('projects'); };
@@ -248,7 +250,7 @@ function App() {
   if (!currentUser) return <Login users={users} branches={branches} onLogin={handleLogin} />;
 
   const renderContent = () => {
-    const visibleUsers = (currentUser.role === UserRole.GERENCIA || currentUser.role === UserRole.SOCIO) ? users : users.filter(u => u.role !== UserRole.SOCIO);
+    const visibleUsers = (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.GERENCIA || currentUser.role === UserRole.SOCIO) ? users : users.filter(u => u.role !== UserRole.SOCIO);
     switch (activeTab) {
       case 'dashboard': return <Dashboard projects={projects} tasks={tasks} role={currentUser.role} users={visibleUsers} currentUser={currentUser} />;
       case 'projects': return <TaskList tasks={tasks} users={visibleUsers} currentUser={currentUser} onUpdateTask={handleUpdateTask} onAddTask={handleAddTask} onDeleteTask={handleDeleteTask} />;
