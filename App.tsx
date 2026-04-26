@@ -13,6 +13,7 @@ import { ProfileManagement } from './components/ProfileManagement';
 import { MOCK_PROJECTS, MOCK_TASKS, MOCK_USERS, MOCK_BRANCHES } from './constants';
 import { Task, User, UserRole, Branch, Project, TaskStatus, Profile } from './types';
 import { syncService } from './services/syncService';
+import { notificationService } from './services/notificationService';
 import { testFullSync } from './services/testSync';
 import { runDiagnostic } from './services/diagnostic';
 import { Cloud, RefreshCw } from 'lucide-react';
@@ -251,9 +252,22 @@ function App() {
     setUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
     setCurrentUser(updatedUser);
     setActiveTab(['ADMIN', 'ENCARGADO', 'GERENCIA', 'SOCIO', 'SUPERVISOR', 'RRHH'].includes(user.role) ? 'dashboard' : 'projects');
+    notificationService.requestPermission();
   };
 
   const handleLogout = () => { setCurrentUser(null); setActiveTab('projects'); };
+
+  // Notificaciones: chequear tareas vencidas y nuevas asignaciones
+  useEffect(() => {
+    if (!currentUser || tasks.length === 0) return;
+    notificationService.checkOverdue(tasks, currentUser.id, currentUser.name);
+    notificationService.checkNewAssignments(tasks, currentUser.id);
+    const interval = setInterval(() => {
+      notificationService.checkOverdue(tasks, currentUser.id, currentUser.name);
+      notificationService.checkNewAssignments(tasks, currentUser.id);
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [currentUser, tasks]);
 
   if (isLoading) {
     return (

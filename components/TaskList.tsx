@@ -50,6 +50,8 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, users, currentUser, o
   const [executingFile, setExecutingFile] = useState<Attachment | null>(null);
   const [execStatus, setExecStatus] = useState<'BOOTING' | 'RUNNING'>('BOOTING');
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [completionModal, setCompletionModal] = useState<Task | null>(null);
+  const [completionComment, setCompletionComment] = useState('');
 
   const initialTaskState: Partial<Task> = {
     title: '', description: '', startDate: new Date().toISOString().split('T')[0], startTime: '09:00',
@@ -67,8 +69,18 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, users, currentUser, o
   const exeInputRef = useRef<HTMLInputElement>(null);
   const attachInputRef = useRef<HTMLInputElement>(null);
 
-  const isSuperior = [UserRole.ENCARGADO, UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
-  const canSeeAudit = [UserRole.ENCARGADO, UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
+  const isSuperior = [UserRole.ADMIN, UserRole.ENCARGADO, UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
+  const canSeeAudit = [UserRole.ADMIN, UserRole.ENCARGADO, UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH].includes(currentUser.role);
+
+  const getUrgency = (task: Task): 'overdue' | 'today' | 'soon' | 'ok' => {
+    if (!task.dueDate || task.status === TaskStatus.COMPLETADO) return 'ok';
+    const today = new Date().toISOString().split('T')[0];
+    const in2days = new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0];
+    if (task.dueDate < today) return 'overdue';
+    if (task.dueDate === today) return 'today';
+    if (task.dueDate <= in2days) return 'soon';
+    return 'ok';
+  };
 
   const filteredTasks = useMemo(() => {
     if (currentUser.role === UserRole.USUARIO) return tasks.filter(t => t.assigneeId === currentUser.id);
@@ -115,12 +127,45 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, users, currentUser, o
     setTimeout(() => setExecStatus('RUNNING'), 1800);
   };
 
+  const handleConfirmCompletion = useCallback(() => {
+    if (!completionModal || !completionComment.trim()) return;
+    const comment: Comment = {
+      id: `c${Date.now()}`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      text: `✅ CIERRE: ${completionComment.trim()}`,
+      timestamp: new Date().toISOString(),
+    };
+    const log: ExecutionLog = {
+      id: `log-st-${Date.now()}`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.role,
+      timestamp: new Date().toISOString(),
+      action: `CAMBIO DE ESTADO A: ${TaskStatus.COMPLETADO}`,
+    };
+    const updated = {
+      ...completionModal,
+      status: TaskStatus.COMPLETADO,
+      comments: [...(completionModal.comments || []), comment],
+      executionLogs: [...(completionModal.executionLogs || []), log],
+    };
+    onUpdateTask(updated);
+    setSelectedTask(null);
+    setCompletionModal(null);
+    setCompletionComment('');
+  }, [completionModal, completionComment, currentUser, onUpdateTask]);
+
   const handleStatusUpdate = useCallback((task: Task, newStatus: TaskStatus) => {
+    if (newStatus === TaskStatus.COMPLETADO) {
+      setCompletionModal(task);
+      setCompletionComment('');
+      return;
+    }
     const log: ExecutionLog = { id: `log-st-${Date.now()}`, userId: currentUser.id, userName: currentUser.name, userRole: currentUser.role, timestamp: new Date().toISOString(), action: `CAMBIO DE ESTADO A: ${newStatus}` };
     const updated = { ...task, status: newStatus, executionLogs: [...(task.executionLogs || []), log] };
     onUpdateTask(updated);
-    if (newStatus === TaskStatus.COMPLETADO) setSelectedTask(null);
-    else if (selectedTask?.id === task.id) setSelectedTask(updated);
+    if (selectedTask?.id === task.id) setSelectedTask(updated);
   }, [onUpdateTask, selectedTask, currentUser]);
 
   const handleSendNovedad = () => {
@@ -276,6 +321,36 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, users, currentUser, o
         </div>
       )}
 
+      {/* Banner de alertas de vencimiento */}
+      {(() => {
+        const myTasks = filteredTasks.filter(t => t.status !== TaskStatus.COMPLETADO);
+        const overdue = myTasks.filter(t => getUrgency(t) === 'overdue');
+        const today = myTasks.filter(t => getUrgency(t) === 'today');
+        if (overdue.length === 0 && today.length === 0) return null;
+        return (
+          <div className="mx-3 mb-3 shrink-0 flex space-x-3">
+            {overdue.length > 0 && (
+              <div className="flex-1 bg-red-50 border border-red-200 rounded-2xl px-4 py-2.5 flex items-center space-x-3">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                <span className="text-xs font-black text-red-700">
+                  {overdue.length} tarea{overdue.length > 1 ? 's' : ''} VENCIDA{overdue.length > 1 ? 'S' : ''}
+                </span>
+                <span className="text-[10px] text-red-500 truncate">{overdue.map(t => t.title).join(', ')}</span>
+              </div>
+            )}
+            {today.length > 0 && (
+              <div className="flex-1 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-2.5 flex items-center space-x-3">
+                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                <span className="text-xs font-black text-amber-700">
+                  {today.length} tarea{today.length > 1 ? 's' : ''} VENCE HOY
+                </span>
+                <span className="text-[10px] text-amber-500 truncate">{today.map(t => t.title).join(', ')}</span>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Header Tablero */}
       <div className="flex justify-between items-center mb-4 shrink-0 px-3">
         <div>
@@ -304,8 +379,17 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, users, currentUser, o
                 </span>
             </div>
             <div className="space-y-3 overflow-y-auto pr-1 custom-scrollbar-thin flex-1 pb-2">
-              {filteredTasks.filter(t => t.status === col.status).map(task => (
-                <div key={task.id} onClick={() => { setSelectedTask(task); setShowAuditLogs(false); }} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md hover:border-brand-500 transition-all cursor-pointer group relative">
+              {filteredTasks.filter(t => t.status === col.status).map(task => {
+                const urgency = getUrgency(task);
+                const urgencyClass = urgency === 'overdue'
+                  ? 'border-red-300 shadow-red-100 bg-red-50/40'
+                  : urgency === 'today'
+                  ? 'border-amber-300 shadow-amber-100 bg-amber-50/30'
+                  : urgency === 'soon'
+                  ? 'border-yellow-200'
+                  : 'border-slate-100';
+                return (
+                <div key={task.id} onClick={() => { setSelectedTask(task); setShowAuditLogs(false); }} className={`bg-white p-4 rounded-3xl shadow-sm border hover:shadow-md hover:border-brand-500 transition-all cursor-pointer group relative ${urgencyClass}`}>
                    <div className="flex justify-between items-start mb-2">
                       <span className={`text-[8px] font-black px-2 py-0.5 rounded-md border uppercase tracking-tighter ${task.priority === 'CRITICA' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>{task.priority}</span>
                       <div className="flex items-center space-x-2">
@@ -330,11 +414,61 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, users, currentUser, o
                       </span>
                    </div>
                 </div>
-              ))}
+              );})}
             </div>
           </div>
         ))}
       </div>
+
+      {/* MODAL CIERRE OBLIGATORIO */}
+      {completionModal && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-[200] p-4">
+          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg border border-white/20 overflow-hidden">
+            <div className="p-8 border-b bg-slate-50/50">
+              <div className="flex items-center space-x-4 mb-2">
+                <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
+                  <Check size={24} className="text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-800 tracking-tighter">Confirmar Cierre</h2>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Informe de finalización requerido</p>
+                </div>
+              </div>
+              <p className="text-sm font-bold text-slate-600 mt-4 bg-slate-100 rounded-2xl px-4 py-3">
+                "{completionModal.title}"
+              </p>
+            </div>
+            <div className="p-8 space-y-4">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                ¿Qué se realizó? (obligatorio)
+              </label>
+              <textarea
+                value={completionComment}
+                onChange={e => setCompletionComment(e.target.value)}
+                placeholder="Describí brevemente qué se hizo para completar esta tarea..."
+                rows={4}
+                autoFocus
+                className="w-full border border-slate-200 rounded-2xl p-4 text-sm font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 outline-none transition-all resize-none"
+              />
+              <div className="flex space-x-3 pt-2">
+                <button
+                  onClick={() => { setCompletionModal(null); setCompletionComment(''); }}
+                  className="flex-1 py-4 text-slate-400 font-black text-xs uppercase tracking-widest border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmCompletion}
+                  disabled={!completionComment.trim()}
+                  className="flex-1 py-4 bg-blue-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Confirmar Cierre
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL NUEVA OPERACIÓN */}
       {isFormModalOpen && (
