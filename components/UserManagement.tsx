@@ -1,9 +1,9 @@
 
 import React, { useState, useRef } from 'react';
 import { Branch, User, UserRole, Task, TaskStatus } from '../types';
-import { 
-  Edit2, Plus, Save, X, Trash2, ShieldAlert, MapPin, 
-  CheckCircle2, ChevronRight, Check, Users, Camera, Image as ImageIcon 
+import {
+  Edit2, Plus, Save, X, Trash2, ShieldAlert, MapPin,
+  CheckCircle2, ChevronRight, Check, Users, Camera, Image as ImageIcon, KeyRound
 } from 'lucide-react';
 
 interface UserManagementProps {
@@ -22,6 +22,9 @@ export const UserManagement: React.FC<UserManagementProps> = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [userToReset, setUserToReset] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState('');
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [step, setStep] = useState<1 | 2>(1);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -34,6 +37,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const canManage = (targetUser?: User) => {
+    if (currentUser.role === UserRole.ADMIN) return true;
     if (currentUser.role === UserRole.RRHH) {
         if (!targetUser) return true;
         return [UserRole.USUARIO, UserRole.ENCARGADO, UserRole.SUPERVISOR].includes(targetUser.role);
@@ -44,6 +48,21 @@ export const UserManagement: React.FC<UserManagementProps> = ({
       return true;
     }
     return false;
+  };
+
+  const handleOpenResetModal = (user: User) => {
+    setUserToReset(user);
+    setNewPassword('');
+    setIsResetModalOpen(true);
+  };
+
+  const handleResetPassword = () => {
+    if (userToReset && newPassword.trim()) {
+      onUpdateUser({ ...userToReset, password: newPassword.trim() });
+      setIsResetModalOpen(false);
+      setUserToReset(null);
+      setNewPassword('');
+    }
   };
 
   const handleOpenModal = (user?: User) => {
@@ -189,8 +208,9 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 </td>
                 <td className="px-8 py-5">
                   <span className={`px-3 py-1 text-[9px] font-black rounded-full uppercase tracking-tighter border ${
-                    user.role === UserRole.SOCIO ? 'bg-purple-50 text-purple-600 border-purple-100' : 
-                    user.role === UserRole.GERENCIA ? 'bg-blue-50 text-blue-600 border-blue-100' : 
+                    user.role === UserRole.ADMIN ? 'bg-red-50 text-red-600 border-red-100' :
+                    user.role === UserRole.SOCIO ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                    user.role === UserRole.GERENCIA ? 'bg-blue-50 text-blue-600 border-blue-100' :
                     'bg-slate-50 text-slate-500 border-slate-100'}`}>
                     {user.role}
                   </span>
@@ -203,6 +223,9 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 <td className="px-8 py-5 text-right">
                   {canManage(user) ? (
                     <div className="flex justify-end space-x-2">
+                      <button onClick={() => handleOpenResetModal(user)} className="text-slate-300 hover:text-amber-600 p-2.5 rounded-xl transition-all hover:bg-amber-50" title="Cambiar contraseña">
+                        <KeyRound size={20} />
+                      </button>
                       <button onClick={() => handleOpenModal(user)} className="text-slate-300 hover:text-brand-600 p-2.5 rounded-xl transition-all hover:bg-brand-50" title="Editar">
                         <Edit2 size={20} />
                       </button>
@@ -378,6 +401,46 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                         <ChevronRight size={18} />
                     </button>
                 </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isResetModalOpen && userToReset && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[80] p-4">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md animate-scale-in border border-white/20 overflow-hidden">
+            <div className="p-8 text-center">
+              <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <KeyRound size={40} />
+              </div>
+              <h3 className="text-2xl font-black text-slate-800 tracking-tighter mb-1">Cambiar Contraseña</h3>
+              <p className="text-slate-500 text-sm font-medium mb-6">
+                Usuario: <strong className="text-slate-800">{userToReset.name}</strong>
+              </p>
+              <input
+                type="text"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleResetPassword()}
+                placeholder="Nueva contraseña..."
+                autoFocus
+                className="w-full border border-slate-200 rounded-2xl p-4 text-sm font-bold focus:ring-4 focus:ring-amber-500/10 outline-none transition-all text-center tracking-widest"
+              />
+            </div>
+            <div className="p-6 bg-slate-50 flex space-x-3">
+              <button
+                onClick={() => setIsResetModalOpen(false)}
+                className="flex-1 px-6 py-4 rounded-2xl text-slate-500 font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleResetPassword}
+                disabled={!newPassword.trim()}
+                className="flex-1 px-6 py-4 rounded-2xl bg-amber-500 text-white font-black text-xs uppercase tracking-widest hover:bg-amber-600 shadow-lg shadow-amber-500/20 transition-all active:scale-95 disabled:opacity-50"
+              >
+                Guardar
+              </button>
             </div>
           </div>
         </div>
