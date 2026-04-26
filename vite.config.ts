@@ -5,7 +5,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
     plugins: [react()],
-    base: '/Farmacias-Gigliotti-Notificaciones/',
+    base: '/farmacias-gigliotti/',
     build: {
       outDir: 'dist',
       emptyOutDir: true,
