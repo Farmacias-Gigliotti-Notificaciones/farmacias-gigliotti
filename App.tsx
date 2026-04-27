@@ -55,14 +55,13 @@ function App() {
       setTasks(data.tasks.length ? data.tasks : MOCK_TASKS);
       setBranches(data.branches.length ? data.branches : MOCK_BRANCHES);
       setProjects(data.projects.length ? data.projects : MOCK_PROJECTS);
-      
+      setCustomProfiles(data.profiles.length ? data.profiles : JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILES) || '[]'));
+
       const session = localStorage.getItem(STORAGE_KEYS.SESSION);
       if (session) setCurrentUser(JSON.parse(session));
-      
+
       const tab = localStorage.getItem(STORAGE_KEYS.TAB);
       if (tab) setActiveTab(JSON.parse(tab));
-
-      setCustomProfiles(JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILES) || '[]'));
       setLastSeenMap(JSON.parse(localStorage.getItem(STORAGE_KEYS.LAST_SEEN_MAP) || '{}'));
       setHiddenChats(JSON.parse(localStorage.getItem(STORAGE_KEYS.HIDDEN_CHATS) || '[]'));
       

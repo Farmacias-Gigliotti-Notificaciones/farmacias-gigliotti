@@ -228,7 +228,8 @@ export const syncService = {
       { key: 'farmacia_users_v2', name: 'Usuarios' },
       { key: 'farmacia_tasks_v2', name: 'Tareas' },
       { key: 'farmacia_branches_v2', name: 'Sucursales' },
-      { key: 'farmacia_projects_v2', name: 'Proyectos' }
+      { key: 'farmacia_projects_v2', name: 'Proyectos' },
+      { key: 'farmacia_profiles_v2', name: 'Perfiles' }
     ];
 
     for (const table of tables) {
@@ -366,7 +367,8 @@ export const syncService = {
           users: await fetchTable('users'),
           tasks: await fetchTable('tasks'),
           branches: await fetchTable('branches'),
-          projects: await fetchTable('projects')
+          projects: await fetchTable('projects'),
+          profiles: await fetchTable('profiles')
         };
       } catch (e) { console.error("Error Sync."); }
     }
@@ -374,7 +376,8 @@ export const syncService = {
       users: JSON.parse(localStorage.getItem('farmacia_users_v2') || '[]'),
       tasks: JSON.parse(localStorage.getItem('farmacia_tasks_v2') || '[]'),
       branches: JSON.parse(localStorage.getItem('farmacia_branches_v2') || '[]'),
-      projects: JSON.parse(localStorage.getItem('farmacia_projects_v2') || '[]')
+      projects: JSON.parse(localStorage.getItem('farmacia_projects_v2') || '[]'),
+      profiles: JSON.parse(localStorage.getItem('farmacia_profiles_v2') || '[]')
     };
   },
 
