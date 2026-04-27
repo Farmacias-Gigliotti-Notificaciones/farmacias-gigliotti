@@ -132,7 +132,8 @@ export const syncService = {
       'farmacia_users_v2': 'users',
       'farmacia_tasks_v2': 'tasks',
       'farmacia_branches_v2': 'branches',
-      'farmacia_projects_v2': 'projects'
+      'farmacia_projects_v2': 'projects',
+      'farmacia_profiles_v2': 'profiles'
     };
     
     const tableName = tableMap[tableKey];

@@ -100,7 +100,7 @@ function App() {
   useEffect(() => { if (!isLoading) queueSync(STORAGE_KEYS.PROJECTS, projects); }, [projects, isLoading]);
   useEffect(() => { if (!isLoading) queueSync(STORAGE_KEYS.LAST_SEEN_MAP, lastSeenMap); }, [lastSeenMap, isLoading]);
   useEffect(() => { if (!isLoading) queueSync(STORAGE_KEYS.HIDDEN_CHATS, hiddenChats); }, [hiddenChats, isLoading]);
-  useEffect(() => { if (!isLoading) localStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(customProfiles)); }, [customProfiles, isLoading]);
+  useEffect(() => { if (!isLoading) queueSync(STORAGE_KEYS.PROFILES, customProfiles); }, [customProfiles, isLoading]);
   useEffect(() => { 
     if (currentUser) localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(currentUser));
     else localStorage.removeItem(STORAGE_KEYS.SESSION);
