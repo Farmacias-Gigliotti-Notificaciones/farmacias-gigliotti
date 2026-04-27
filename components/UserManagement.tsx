@@ -31,8 +31,10 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   
+  const SYSTEM_ROLES = [UserRole.ADMIN, UserRole.USUARIO, UserRole.ENCARGADO, UserRole.SUPERVISOR, UserRole.GERENCIA, UserRole.SOCIO, UserRole.RRHH];
+
   const [formData, setFormData] = useState<Partial<User>>({
-    name: '', role: UserRole.USUARIO, password: '', branch: '', avatar: 'https://picsum.photos/200'
+    name: '', username: '', role: UserRole.USUARIO, password: '', branch: '', avatar: 'https://picsum.photos/200'
   });
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -75,7 +77,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     } else {
       setEditingUser(null);
       setFormData({
-        name: '', role: UserRole.USUARIO, password: '', branch: '', avatar: `https://picsum.photos/id/${Math.floor(Math.random() * 200)}/100/100`, usageStats: { week: 0, month: 0, year: 0 }
+        name: '', username: '', role: UserRole.USUARIO, password: '', branch: '', avatar: `https://picsum.photos/id/${Math.floor(Math.random() * 200)}/100/100`, usageStats: { week: 0, month: 0, year: 0 }
       });
       setStep(1);
     }
@@ -203,7 +205,9 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                     <img className="h-12 w-12 rounded-2xl border-2 border-white shadow-sm object-cover" src={user.avatar} alt="" />
                     <div>
                       <div className="text-sm font-black text-slate-800">{user.name}</div>
-                      <div className="text-[9px] font-bold text-slate-400 uppercase mb-1">ID: {user.id.slice(0, 8)}...</div>
+                      <div className="text-[9px] font-bold text-slate-400 uppercase mb-1">
+                        {user.username ? `@${user.username}` : `ID: ${user.id.slice(0, 8)}...`}
+                      </div>
                       {user.profiles && user.profiles.length > 0 && (
                         <div className="flex flex-wrap gap-1">
                           {user.profiles.map(pid => {
@@ -306,10 +310,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
 
                             <div className="grid grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Rol / Jerarquía</label>
-                                    <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as UserRole})} className="w-full border border-slate-200 rounded-2xl p-4 text-sm font-bold focus:ring-4 focus:ring-brand-500/10 outline-none transition-all">
-                                    {Object.values(UserRole).map(role => <option key={role} value={role}>{role}</option>)}
-                                    </select>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Nombre de Usuario</label>
+                                    <input type="text" value={formData.username || ''} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full border border-slate-200 rounded-2xl p-4 text-sm font-bold focus:ring-4 focus:ring-brand-500/10 outline-none transition-all" placeholder="ej: jperez" required />
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Contraseña</label>
@@ -325,11 +327,18 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                                 </select>
                             </div>
 
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Nivel de Acceso al Sistema</label>
+                                <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as UserRole})} className="w-full border border-slate-200 rounded-2xl p-4 text-sm font-bold focus:ring-4 focus:ring-brand-500/10 outline-none transition-all">
+                                  {SYSTEM_ROLES.map(role => <option key={role} value={role}>{role}</option>)}
+                                </select>
+                            </div>
+
                             {profiles.length > 0 && (
                               <div>
                                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1 flex items-center space-x-2">
                                   <Tag size={12} className="inline mr-1" />
-                                  Perfiles adicionales
+                                  Roles / Perfiles Asignados
                                 </label>
                                 <div className="flex flex-wrap gap-2">
                                   {profiles.map(profile => {

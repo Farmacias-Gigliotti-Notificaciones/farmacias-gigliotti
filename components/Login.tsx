@@ -19,7 +19,9 @@ export const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
       setError('Por favor ingrese su usuario');
       return;
     }
-    const user = users.find(u => u.name.toLowerCase() === username.trim().toLowerCase());
+    const user = users.find(u =>
+      (u.username ? u.username.toLowerCase() : u.name.toLowerCase()) === username.trim().toLowerCase()
+    );
     if (user && user.password === password) {
       onLogin(user);
     } else {

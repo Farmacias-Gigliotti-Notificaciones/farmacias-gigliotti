@@ -72,6 +72,7 @@ export interface Profile {
 export interface User {
   id: string;
   name: string;
+  username?: string;
   role: UserRole;
   branch?: string;
   avatar: string;
