@@ -51,6 +51,10 @@ import { CloudConfig } from '../types';
  *   - endDate: date
  */
 
+const USER_SYNC_FIELDS = [
+  'id', 'name', 'username', 'role', 'branch', 'avatar', 'password', 'lastLogin', 'profiles'
+];
+
 const TASK_SYNC_FIELDS = [
   'id', 'title', 'description', 'status', 'priority', 'assigneeId', 'creatorId',
   'creatorName', 'createdAt', 'targetRoles', 'projectId', 'rating', 'feedback',
@@ -390,13 +394,11 @@ export const syncService = {
     }
 
     try {
-      // Filtrar solo los campos que Supabase espera para cada tabla
       let cleanData = { ...data };
-      
       if (table === 'tasks') {
-        cleanData = Object.fromEntries(
-          Object.entries(cleanData).filter(([key]) => TASK_SYNC_FIELDS.includes(key))
-        );
+        cleanData = Object.fromEntries(Object.entries(cleanData).filter(([key]) => TASK_SYNC_FIELDS.includes(key)));
+      } else if (table === 'users') {
+        cleanData = Object.fromEntries(Object.entries(cleanData).filter(([key]) => USER_SYNC_FIELDS.includes(key)));
       }
 
       const response = await fetch(`${cleanUrl}/rest/v1/${table}`, {
@@ -436,13 +438,11 @@ export const syncService = {
     }
 
     try {
-      // Filtrar solo los campos que Supabase espera para cada tabla
       let cleanData = { ...data };
-      
       if (table === 'tasks') {
-        cleanData = Object.fromEntries(
-          Object.entries(cleanData).filter(([key]) => TASK_SYNC_FIELDS.includes(key))
-        );
+        cleanData = Object.fromEntries(Object.entries(cleanData).filter(([key]) => TASK_SYNC_FIELDS.includes(key)));
+      } else if (table === 'users') {
+        cleanData = Object.fromEntries(Object.entries(cleanData).filter(([key]) => USER_SYNC_FIELDS.includes(key)));
       }
 
       const response = await fetch(`${cleanUrl}/rest/v1/${table}?id=eq.${id}`, {
