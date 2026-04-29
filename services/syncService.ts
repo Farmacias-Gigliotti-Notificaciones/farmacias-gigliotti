@@ -273,19 +273,19 @@ export const syncService = {
     const errors: string[] = [];
     
     try {
-      // Validar conectividad básica
-      const connRes = await fetch(`${cleanUrl}/rest/v1/`, { headers, method: 'GET' });
+      // Validar conectividad probando directamente la tabla users (más confiable que el root)
+      const connRes = await fetch(`${cleanUrl}/rest/v1/users?limit=0`, { headers });
       if (!connRes.ok) {
         if (connRes.status === 401 || connRes.status === 403) {
           return { success: false, message: '❌ Error de autenticación: API Key inválida o sin permisos.' };
         }
         return { success: false, message: `❌ Error de conectividad (${connRes.status}). Verificá la URL y API Key.` };
       }
-      
+
       // Validar que cada tabla exista
       for (const table of tables) {
         try {
-          const res = await fetch(`${cleanUrl}/rest/v1/${table}?limit=1`, { headers });
+          const res = await fetch(`${cleanUrl}/rest/v1/${table}?limit=0`, { headers });
           if (res.status === 404) {
             errors.push(`- Tabla "${table}" no existe en Supabase`);
           } else if (!res.ok) {
@@ -295,12 +295,12 @@ export const syncService = {
           errors.push(`- Tabla "${table}": ${String(e)}`);
         }
       }
-      
+
       if (errors.length > 0) {
         const msg = '❌ Problemas encontrados:\n' + errors.join('\n');
         return { success: false, message: msg };
       }
-      
+
       return { success: true, message: '✅ ¡Conectado correctamente a Supabase! Todas las tablas están disponibles.' };
     } catch (e) {
       return { success: false, message: `❌ ERROR: ${String(e)}` };

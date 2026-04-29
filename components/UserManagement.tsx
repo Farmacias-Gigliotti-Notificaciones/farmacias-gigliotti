@@ -111,7 +111,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     if (editingUser) {
       onUpdateUser({ ...editingUser, ...formData } as User);
     } else {
-      const newUserId = `u${Date.now()}`;
+      const newUserId = crypto.randomUUID();
       const newUser: User = { ...formData as User, id: newUserId };
       onAddUser(newUser);
 
