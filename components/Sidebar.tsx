@@ -14,7 +14,8 @@ import {
   Cloud,
   CheckCircle2,
   RefreshCw,
-  Tag
+  Tag,
+  ClipboardList
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -42,6 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeTab, setAct
     { id: 'profiles', label: 'Perfiles', icon: Tag, show: isAdmin },
     { id: 'branches', label: 'Sucursales Gigliotti', icon: Building2, show: canManageBranches },
     { id: 'activity', label: 'Métricas de Uso', icon: BarChart2, show: isAdmin },
+    { id: 'report', label: 'Reporte de Tareas', icon: ClipboardList, show: isAdmin },
   ];
 
   return (
@@ -110,7 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeTab, setAct
           </div>
           <div className="flex items-center space-x-2">
              <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]"></div>
-             <p className="text-[9px] font-bold text-slate-500 italic">Conectado a Central v2.1</p>
+             <p className="text-[9px] font-bold text-slate-500 italic">Conectado a Central v2.2</p>
           </div>
       </div>
 

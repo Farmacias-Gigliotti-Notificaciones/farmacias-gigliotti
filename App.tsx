@@ -10,6 +10,7 @@ import { UserAnalytics } from './components/UserAnalytics';
 import { Settings } from './components/Settings';
 import { GlobalChat } from './components/GlobalChat';
 import { ProfileManagement } from './components/ProfileManagement';
+import { TaskReport } from './components/TaskReport';
 import { MOCK_PROJECTS, MOCK_TASKS, MOCK_USERS, MOCK_BRANCHES } from './constants';
 import { Task, User, UserRole, Branch, Project, TaskStatus, Profile } from './types';
 import { syncService } from './services/syncService';
@@ -339,6 +340,7 @@ function App() {
       );
       case 'branches': return <BranchManagement branches={branches} onAddBranch={handleAddBranch} onUpdateBranch={handleUpdateBranch} onDeleteBranch={handleDeleteBranch} />;
       case 'activity': return <UserAnalytics users={visibleUsers} />;
+      case 'report': return <TaskReport tasks={tasks} users={visibleUsers} currentUser={currentUser} />;
       case 'settings': return <Settings currentUser={currentUser} onUpdateUser={u => setUsers(users.map(x => x.id === u.id ? u : x))} />;
       default: return <div className="p-8 text-center text-slate-400">Sección en construcción</div>;
     }
