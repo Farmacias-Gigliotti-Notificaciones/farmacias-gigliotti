@@ -362,10 +362,10 @@ export const syncService = {
       try {
         const headers = await this.getHeaders();
         const fetchTable = async (table: string) => {
-          const res = await fetch(`${cleanUrl}/rest/v1/${table}?select=*`, {
-            headers
-          });
-          return await res.json();
+          const res = await fetch(`${cleanUrl}/rest/v1/${table}?select=*`, { headers });
+          if (!res.ok) return [];
+          const data = await res.json();
+          return Array.isArray(data) ? data : [];
         };
         return {
           users: await fetchTable('users'),
